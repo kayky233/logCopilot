@@ -1,3 +1,6 @@
+"""
+ui.py — LogPilot Streamlit UI 组件 (Phase 1: 用户隔离版)
+"""
 import os
 
 import pandas as pd
@@ -8,34 +11,49 @@ import utils
 
 def render_sidebar():
     """
-    渲染侧边栏，集成所有配置项
+    渲染侧边栏，集成所有配置项。
     Returns:
-        api_key, base_url, model_name (API配置)
-        enable_filter, filter_keywords, context_lines (日志初筛配置)
-        path_prefix (路径映射配置)
+        api_key, base_url, model_name, enable_filter,
+        filter_keywords, context_lines, path_prefix, enable_code_agent
     """
     with st.sidebar:
         st.title("🎛️ 故障判决控制台")
 
+        # =========================================================
         # 1. 用户身份
+        # =========================================================
         with st.container(border=True):
             col_u1, col_u2 = st.columns([3, 1])
             with col_u1:
                 user_id = st.text_input(
                     "👤 当前用户",
-                    value="default",
-                    help="输入ID自动加载专属配置",
+                    value=st.session_state.get("user_id", "default"),
+                    help="输入ID自动加载专属配置和工作空间",
                     key="uid_input",
                     label_visibility="collapsed",
                 )
             with col_u2:
                 st.write("")
                 st.caption("🟢 在线")
+
+            # 切换用户时初始化工作空间
+            if user_id != st.session_state.get("user_id", "default"):
+                st.session_state["user_id"] = user_id
+                utils.init_environment(user_id)
+
+            st.session_state["user_id"] = user_id
             user_config = utils.load_user_config(user_id)
+
+            # 显示存储用量
+            usage = utils.get_user_storage_usage(user_id)
+            pct = min(100, int(usage["total_mb"] / usage["limit_mb"] * 100)) if usage["limit_mb"] > 0 else 0
+            st.progress(pct / 100, text=f"💾 {usage['total_mb']}MB / {usage['limit_mb']}MB ({usage['file_count']} 文件)")
 
         st.caption("--- 🔧 高级能力配置 ---")
 
+        # =========================================================
         # 2. 增强能力 (代码库 + 日志初筛)
+        # =========================================================
         with st.expander("🛠️ 增强分析能力", expanded=False):
             st.markdown("**1. 本地代码库 (Agent)**")
 
@@ -67,7 +85,6 @@ def render_sidebar():
 
             st.divider()
 
-            # B. 日志初筛
             st.markdown("**2. 日志智能初筛**")
             enable_filter = st.toggle("启用初筛", value=False, help="仅提取关键报错行及其上下文")
 
@@ -80,7 +97,9 @@ def render_sidebar():
                 filter_keywords = [k.strip() for k in normalized_str.split(",") if k.strip()]
                 context_lines = st.number_input("上下文行数", min_value=1, max_value=20, value=5)
 
+        # =========================================================
         # 3. 知识库管理 (Prompt + 手册)
+        # =========================================================
         with st.expander("🧠 知识库管理 (Prompt/手册)", expanded=False):
             st.caption("📝 **Prompt 规则定义**")
             sys_opts = [f"🤖 System: {d} 专家" for d in utils.DOMAINS]
@@ -116,35 +135,37 @@ def render_sidebar():
 
             st.divider()
 
-            # B. 手册管理
+            # 手册管理
             st.caption("📚 **故障手册库**")
             dom = st.selectbox("选择领域", utils.DOMAINS, key="dom_sel")
-            target_dir = os.path.join(utils.MANUAL_ROOT_DIR, dom)
+            user_manual_dir = os.path.join(utils.get_user_manual_root(user_id), dom)
 
             up_m = st.file_uploader(
                 f"上传至 {dom}",
-                type=["md", "pdf", "docx"],
+                type=["md", "pdf", "docx", "txt"],
                 accept_multiple_files=True,
                 key=f"um_{dom}",
             )
             if up_m:
-                utils.save_uploaded_manuals(up_m, dom)
+                utils.save_uploaded_manuals(up_m, dom, user_id)
 
-            if os.path.exists(target_dir):
-                files = sorted(os.listdir(target_dir))
+            if os.path.exists(user_manual_dir):
+                files = sorted(os.listdir(user_manual_dir))
                 if files:
                     with st.popover(f"🗑️ 管理 {dom} 文件"):
                         del_files = st.multiselect("选择删除", files, key=f"del_{dom}")
                         if del_files and st.button("确认删除", key=f"btn_d_{dom}"):
-                            utils.delete_files(target_dir, del_files)
+                            utils.delete_files(user_manual_dir, del_files)
                             st.rerun()
 
-            tree = utils.get_manuals_by_domain()
-            cnt_str = " | ".join([f"{d}:{len(tree[d])}" for d in utils.DOMAINS if len(tree[d]) > 0])
+            tree = utils.get_manuals_by_domain(user_id)
+            cnt_str = " | ".join([f"{d}:{len(tree.get(d, []))}" for d in utils.DOMAINS if len(tree.get(d, [])) > 0])
             if cnt_str:
                 st.caption(f"库存: {cnt_str}")
 
+        # =========================================================
         # 4. 日志源管理
+        # =========================================================
         with st.expander("🪵 日志源管理", expanded=True):
             up_l = st.file_uploader(
                 "上传日志文件",
@@ -153,19 +174,22 @@ def render_sidebar():
                 label_visibility="collapsed",
             )
             if up_l:
-                utils.save_uploaded_logs(up_l)
+                utils.save_uploaded_logs(up_l, user_id)
 
-            if os.path.exists(utils.LOG_DIR):
-                l_files = sorted(os.listdir(utils.LOG_DIR))
+            user_log_dir = utils.get_user_log_dir(user_id)
+            if os.path.exists(user_log_dir):
+                l_files = sorted(os.listdir(user_log_dir))
                 if l_files:
                     with st.popover("🗑️ 删除日志文件"):
                         del_logs = st.multiselect("选择删除", l_files, key="del_logs")
                         if del_logs and st.button("确认删除", key="btn_del_logs"):
-                            utils.delete_files(utils.LOG_DIR, del_logs)
+                            utils.delete_files(user_log_dir, del_logs)
                             st.rerun()
                     st.caption(f"当前库存: {len(l_files)} 个文件")
 
+        # =========================================================
         # 5. 底部：API 连接
+        # =========================================================
         st.divider()
         with st.expander("⚙️ API 连接配置", expanded=False):
             b_url = st.text_input("Base URL", value=user_config["base_url"], key="k_url")
@@ -176,15 +200,19 @@ def render_sidebar():
                 if utils.save_user_config(user_id, {"base_url": b_url, "model_name": m_name, "api_key": a_key}):
                     st.toast("配置已保存", icon="✅")
 
-            if st.button("🧹 清空工作区", key="btn_cls"):
-                utils.clear_workspace()
+            col_a, col_b = st.columns(2)
+            if col_a.button("🧹 清空我的数据", key="btn_cls"):
+                utils.clear_user_workspace(user_id)
                 st.rerun()
+            if col_b.button("🗑️ 清空缓存", key="btn_cache"):
+                utils.cache_clear()
+                st.toast("缓存已清空", icon="🗑️")
 
         return a_key, b_url, m_name, enable_filter, filter_keywords, context_lines, new_prefix, enable_code_agent
 
 
 def render_selectors(manual_tree, log_files):
-    """主界面选择器 (View 层)"""
+    """主界面选择器"""
     c1, c2 = st.columns([3, 2])
     sel_mans = []
     sel_logs = []
@@ -235,7 +263,7 @@ def render_selectors(manual_tree, log_files):
 
 
 def render_result_card(box, info, res, trace_data=None):
-    """渲染结果卡片，支持维测展示"""
+    """渲染结果卡片"""
     dom, file = info["domain"], info["file"]
     icon = {"BSP": "💻", "CLK": "⏰", "SWITCH": "🔌"}.get(dom, "📄")
 
@@ -263,11 +291,9 @@ def render_result_card(box, info, res, trace_data=None):
                 st.markdown(f"#### 2. 协作步骤 ({len(steps)}步)")
                 for s in steps:
                     st.text(f"👣 {s}")
-
                 if trace_data.get("log_summary"):
                     with st.popover("🕵️‍♂️ 查看 Log Agent 摘要"):
                         st.code(trace_data["log_summary"], language="json")
-
                 if trace_data.get("code_insight"):
                     with st.popover("💻 查看 Code Agent 分析"):
                         st.markdown(trace_data["code_insight"])
@@ -281,4 +307,3 @@ def render_result_card(box, info, res, trace_data=None):
             full_input = trace_data.get("final_input") or trace_data.get("prompt_input", "")
             st.caption(f"📏 总字符数: {len(full_input)} (这是 Boss Agent 实际看到的最终输入)")
             st.code(full_input, language="markdown")
-

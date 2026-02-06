@@ -12,3 +12,8 @@ user_configs/
 .DS_Store
 Thumbs.db
 
+# Phase 2+
+storage/
+*.db
+.env
+celerybeat-schedule

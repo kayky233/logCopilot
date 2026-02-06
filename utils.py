@@ -1,6 +1,14 @@
+"""
+utils.py — LogPilot 核心工具模块 (Phase 1: 用户隔离版)
+
+变更记录:
+  - v3.1: 用户工作空间隔离、文件大小限制、LLM 缓存层
+"""
+import hashlib
 import json
 import os
 import shutil
+import time
 
 import pandas as pd
 import streamlit as st
@@ -22,17 +30,22 @@ except ImportError:
 # 1. 全局配置
 # ==========================================
 BASE_DIR = "analysis_workspace"
-LOG_DIR = os.path.join(BASE_DIR, "logs")
-MANUAL_ROOT_DIR = os.path.join(BASE_DIR, "manuals")
 PROMPT_DIR = "prompts"
 CONFIG_DIR = "user_configs"
+CACHE_DIR = os.path.join(BASE_DIR, "cache")
 
-# 新增：代码库与路径映射配置
+# ---- 安全限制 ----
+MAX_UPLOAD_SIZE_MB = 50          # 单文件最大 50MB
+MAX_FILES_PER_USER = 100         # 每用户最多 100 个文件
+MAX_TOTAL_STORAGE_MB = 500       # 每用户最大 500MB 总存储
+
+# ---- 代码库与路径映射配置 ----
 CODEBASE_CONFIG_PATH = os.path.join(CONFIG_DIR, "codebase_path.txt")
 PATH_MAP_CONFIG_PATH = os.path.join(CONFIG_DIR, "path_mapping.txt")
 
-# 领域定义
+# ---- 领域定义 ----
 DOMAINS = ["BSP", "CLK", "SWITCH", "OTHER"]
+
 
 # ==========================================
 # 2. 初始资产 (Prompt 默认值)
@@ -89,40 +102,103 @@ INIT_TASK_TEMPLATE = """# Task
     "fix": "修复建议..."
 }"""
 
+
 # ==========================================
-# 3. 初始化与环境构建
+# 3. 用户工作空间管理 (Phase 1 核心)
 # ==========================================
-def init_environment():
+
+def _sanitize_user_id(user_id: str) -> str:
+    """安全化用户 ID (防目录遍历)"""
+    safe = "".join([c for c in str(user_id) if c.isalnum() or c in "_-"]) or "default"
+    return safe[:64]  # 限制长度
+
+
+def get_user_workspace(user_id: str) -> dict:
+    """
+    获取用户独立工作空间路径。
+    每个用户拥有自己的 logs/ 和 manuals/ 目录。
+    返回 dict: {root, logs, manuals}
+    """
+    safe_id = _sanitize_user_id(user_id)
+    root = os.path.join(BASE_DIR, "workspaces", safe_id)
+    paths = {
+        "root": root,
+        "logs": os.path.join(root, "logs"),
+        "manuals": root,  # manuals 仍按 domain 分，在 root 下
+    }
+    return paths
+
+
+def get_user_log_dir(user_id: str) -> str:
+    return get_user_workspace(user_id)["logs"]
+
+
+def get_user_manual_root(user_id: str) -> str:
+    return os.path.join(get_user_workspace(user_id)["root"], "manuals")
+
+
+# ---- 兼容旧版的全局路径 (供 Prompt/Config 使用，不隔离) ----
+SHARED_MANUAL_ROOT_DIR = os.path.join(BASE_DIR, "shared_manuals")
+LOG_DIR = os.path.join(BASE_DIR, "logs")            # 保留兼容
+MANUAL_ROOT_DIR = os.path.join(BASE_DIR, "manuals")  # 保留兼容
+
+
+def init_environment(user_id: str = "default"):
     """初始化目录并生成默认 Prompt 文件"""
-    for d in [BASE_DIR, LOG_DIR, PROMPT_DIR, MANUAL_ROOT_DIR, CONFIG_DIR]:
-        if not os.path.exists(d):
-            os.makedirs(d)
+    # 全局目录
+    for d in [BASE_DIR, PROMPT_DIR, CONFIG_DIR, CACHE_DIR, SHARED_MANUAL_ROOT_DIR]:
+        os.makedirs(d, exist_ok=True)
 
-    # 初始化领域目录 & System Prompts
+    # 用户工作空间
+    ws = get_user_workspace(user_id)
+    os.makedirs(ws["logs"], exist_ok=True)
+    manual_root = get_user_manual_root(user_id)
     for domain in DOMAINS:
-        # 1. 手册目录
-        d_path = os.path.join(MANUAL_ROOT_DIR, domain)
-        if not os.path.exists(d_path):
-            os.makedirs(d_path)
+        os.makedirs(os.path.join(manual_root, domain), exist_ok=True)
 
-        # 2. System Prompt 文件
+    # 共享手册目录 (管理员统一维护的标准手册)
+    for domain in DOMAINS:
+        os.makedirs(os.path.join(SHARED_MANUAL_ROOT_DIR, domain), exist_ok=True)
+
+    # System Prompts
+    for domain in DOMAINS:
         sys_path = os.path.join(PROMPT_DIR, f"system_{domain}.md")
         if not os.path.exists(sys_path):
             with open(sys_path, "w", encoding="utf-8") as f:
                 f.write(INIT_SYSTEM_PROMPTS.get(domain, INIT_SYSTEM_PROMPTS["OTHER"]))
 
-    # 生成默认 Task Template
+    # Task Template
     task_path = os.path.join(PROMPT_DIR, "task_default.md")
     if not os.path.exists(task_path):
         with open(task_path, "w", encoding="utf-8") as f:
             f.write(INIT_TASK_TEMPLATE)
 
 
-def clear_workspace():
-    """清空工作数据 (保留配置和Prompt)"""
-    if os.path.exists(BASE_DIR):
-        shutil.rmtree(BASE_DIR)
-    init_environment()
+def clear_user_workspace(user_id: str):
+    """清空指定用户的工作数据"""
+    ws = get_user_workspace(user_id)
+    if os.path.exists(ws["root"]):
+        shutil.rmtree(ws["root"])
+    init_environment(user_id)
+
+
+def get_user_storage_usage(user_id: str) -> dict:
+    """统计用户存储使用情况"""
+    ws = get_user_workspace(user_id)
+    total_bytes = 0
+    file_count = 0
+    for dirpath, _, filenames in os.walk(ws["root"]):
+        for f in filenames:
+            fp = os.path.join(dirpath, f)
+            total_bytes += os.path.getsize(fp)
+            file_count += 1
+    return {
+        "total_mb": round(total_bytes / (1024 * 1024), 2),
+        "file_count": file_count,
+        "limit_mb": MAX_TOTAL_STORAGE_MB,
+        "limit_files": MAX_FILES_PER_USER,
+    }
+
 
 # ==========================================
 # 4. Prompt 管理接口
@@ -144,8 +220,6 @@ def load_prompt(layer, name):
                 return f.read()
         except Exception:
             pass
-
-    # Fallback
     if layer == "SYSTEM":
         return INIT_SYSTEM_PROMPTS.get(name, INIT_SYSTEM_PROMPTS["OTHER"])
     return INIT_TASK_TEMPLATE
@@ -162,20 +236,21 @@ def save_prompt(layer, name, content):
             pass
     return False
 
+
 # ==========================================
 # 5. 用户配置管理
 # ==========================================
 def get_config_path(user_id):
-    safe_id = "".join([c for c in user_id if c.isalnum() or c in "_-"]) or "default"
+    safe_id = _sanitize_user_id(user_id)
     return os.path.join(CONFIG_DIR, f"config_{safe_id}.json")
 
 
 def load_user_config(user_id):
     path = get_config_path(user_id)
     default = {
-        "base_url": "http://api.openai.rnd.huawei.com/v1",
-        "model_name": "gpt-oss-120b",
-        "api_key": "sk-dummy",
+        "base_url": "https://api.deepseek.com/v1",
+        "model_name": "deepseek-chat",
+        "api_key": "",
     }
     if os.path.exists(path):
         try:
@@ -194,11 +269,11 @@ def save_user_config(user_id, config_data):
     except Exception:
         return False
 
+
 # ==========================================
 # 6. 本地代码库与路径映射配置
 # ==========================================
 def load_codebase_root():
-    """加载代码库根路径"""
     if os.path.exists(CODEBASE_CONFIG_PATH):
         with open(CODEBASE_CONFIG_PATH, "r", encoding="utf-8") as f:
             return f.read().strip()
@@ -206,8 +281,8 @@ def load_codebase_root():
 
 
 def save_codebase_root(path):
-    """保存代码库根路径"""
     try:
+        os.makedirs(os.path.dirname(CODEBASE_CONFIG_PATH), exist_ok=True)
         with open(CODEBASE_CONFIG_PATH, "w", encoding="utf-8") as f:
             f.write(path.strip())
         return True, "已保存"
@@ -216,7 +291,6 @@ def save_codebase_root(path):
 
 
 def load_path_prefix():
-    """加载需要剥离的服务器路径前缀"""
     if os.path.exists(PATH_MAP_CONFIG_PATH):
         with open(PATH_MAP_CONFIG_PATH, "r", encoding="utf-8") as f:
             return f.read().strip()
@@ -224,17 +298,39 @@ def load_path_prefix():
 
 
 def save_path_prefix(prefix):
-    """保存路径前缀配置"""
     try:
+        os.makedirs(os.path.dirname(PATH_MAP_CONFIG_PATH), exist_ok=True)
         with open(PATH_MAP_CONFIG_PATH, "w", encoding="utf-8") as f:
             f.write(prefix.strip())
         return True, "已保存"
     except Exception as e:
         return False, str(e)
 
+
 # ==========================================
-# 7. 文件 IO 与解析 (保留单一实现)
+# 7. 文件 IO 与解析 (安全增强版)
 # ==========================================
+
+def check_upload_allowed(user_id: str, file_size_bytes: int) -> tuple:
+    """
+    检查是否允许上传 (Phase 1 安全)
+    Returns: (allowed: bool, reason: str)
+    """
+    # 单文件大小检查
+    size_mb = file_size_bytes / (1024 * 1024)
+    if size_mb > MAX_UPLOAD_SIZE_MB:
+        return False, f"文件超过 {MAX_UPLOAD_SIZE_MB}MB 限制 (当前 {size_mb:.1f}MB)"
+
+    # 用户总存储检查
+    usage = get_user_storage_usage(user_id)
+    if usage["file_count"] >= MAX_FILES_PER_USER:
+        return False, f"文件数已达上限 ({MAX_FILES_PER_USER}个)"
+    if usage["total_mb"] + size_mb > MAX_TOTAL_STORAGE_MB:
+        return False, f"存储空间不足 (已用 {usage['total_mb']}MB / {MAX_TOTAL_STORAGE_MB}MB)"
+
+    return True, "OK"
+
+
 def load_file_content(filepath):
     """
     通用文件读取器：支持 .md, .txt, .log, .xlsx, .csv, .docx, .pdf
@@ -242,11 +338,9 @@ def load_file_content(filepath):
     try:
         ext = os.path.splitext(filepath)[1].lower()
 
-        # 1. Excel 处理
         if ext in [".xlsx", ".xls"]:
             return pd.read_excel(filepath).astype(str).agg(" ".join, axis=1).str.cat(sep="\n")
 
-        # 2. CSV 处理
         if ext == ".csv":
             try:
                 df = pd.read_csv(filepath, encoding="utf-8")
@@ -254,53 +348,95 @@ def load_file_content(filepath):
                 df = pd.read_csv(filepath, encoding="gbk")
             return df.astype(str).agg(" ".join, axis=1).str.cat(sep="\n")
 
-        # 3. Word 处理
         if ext == ".docx":
             if docx is None:
                 return "❌ 错误: 未安装 python-docx 库"
             doc = docx.Document(filepath)
             return "\n".join([para.text for para in doc.paragraphs])
 
-        # 4. PDF 处理
         if ext == ".pdf":
             if PdfReader is None:
                 return "❌ 错误: 未安装 pypdf 库"
             reader = PdfReader(filepath)
-            return "\n".join([page.extract_text() for page in reader.pages])
+            return "\n".join([page.extract_text() or "" for page in reader.pages])
 
-        # 5. 纯文本处理
         with open(filepath, "r", encoding="utf-8", errors="replace") as f:
             return f.read()
     except Exception as e:
         return f"❌ 文件解析失败 ({os.path.basename(filepath)}): {str(e)}"
 
 
-def get_manuals_by_domain():
+def get_manuals_by_domain(user_id: str = "default"):
+    """获取用户手册列表 (合并: 用户私有 + 共享)"""
     tree = {}
+    user_manual_root = get_user_manual_root(user_id)
+
     for d in DOMAINS:
-        path = os.path.join(MANUAL_ROOT_DIR, d)
-        if os.path.exists(path):
-            tree[d] = sorted(
-                [f for f in os.listdir(path) if f.lower().endswith((".md", ".pdf", ".docx", ".txt"))]
+        files = set()
+        # 用户私有手册
+        user_path = os.path.join(user_manual_root, d)
+        if os.path.exists(user_path):
+            files.update(
+                f for f in os.listdir(user_path)
+                if f.lower().endswith((".md", ".pdf", ".docx", ".txt"))
             )
+        # 共享手册
+        shared_path = os.path.join(SHARED_MANUAL_ROOT_DIR, d)
+        if os.path.exists(shared_path):
+            files.update(
+                f for f in os.listdir(shared_path)
+                if f.lower().endswith((".md", ".pdf", ".docx", ".txt"))
+            )
+        tree[d] = sorted(files)
+
     return tree
 
 
-def save_uploaded_manuals(uploaded_files, domain):
-    target_dir = os.path.join(MANUAL_ROOT_DIR, domain)
+def resolve_manual_path(user_id: str, domain: str, filename: str) -> str:
+    """解析手册文件的实际路径 (用户私有 > 共享)"""
+    user_path = os.path.join(get_user_manual_root(user_id), domain, filename)
+    if os.path.exists(user_path):
+        return user_path
+    shared_path = os.path.join(SHARED_MANUAL_ROOT_DIR, domain, filename)
+    if os.path.exists(shared_path):
+        return shared_path
+    # 兼容旧路径
+    old_path = os.path.join(MANUAL_ROOT_DIR, domain, filename)
+    if os.path.exists(old_path):
+        return old_path
+    return user_path  # fallback
+
+
+def save_uploaded_manuals(uploaded_files, domain, user_id="default"):
+    target_dir = os.path.join(get_user_manual_root(user_id), domain)
     os.makedirs(target_dir, exist_ok=True)
+    saved = 0
     for f in uploaded_files:
+        allowed, reason = check_upload_allowed(user_id, f.size)
+        if not allowed:
+            st.error(f"❌ {f.name}: {reason}")
+            continue
         with open(os.path.join(target_dir, f.name), "wb") as out_f:
             out_f.write(f.getbuffer())
-    st.toast(f"✅ {len(uploaded_files)} 个手册已上传至 {domain}", icon="📚")
+        saved += 1
+    if saved > 0:
+        st.toast(f"✅ {saved} 个手册已上传至 {domain}", icon="📚")
 
 
-def save_uploaded_logs(uploaded_files):
-    os.makedirs(LOG_DIR, exist_ok=True)
+def save_uploaded_logs(uploaded_files, user_id="default"):
+    log_dir = get_user_log_dir(user_id)
+    os.makedirs(log_dir, exist_ok=True)
+    saved = 0
     for f in uploaded_files:
-        with open(os.path.join(LOG_DIR, f.name), "wb") as out_f:
+        allowed, reason = check_upload_allowed(user_id, f.size)
+        if not allowed:
+            st.error(f"❌ {f.name}: {reason}")
+            continue
+        with open(os.path.join(log_dir, f.name), "wb") as out_f:
             out_f.write(f.getbuffer())
-    st.toast(f"✅ {len(uploaded_files)} 个日志已上传", icon="🪵")
+        saved += 1
+    if saved > 0:
+        st.toast(f"✅ {saved} 个日志已上传", icon="🪵")
 
 
 def delete_files(dir_path, filenames):
@@ -311,8 +447,58 @@ def delete_files(dir_path, filenames):
             pass
     st.toast(f"🗑️ 已删除 {len(filenames)} 个文件", icon="🧹")
 
+
 # ==========================================
-# 8. 日志处理工具
+# 8. LLM 结果缓存 (Phase 1)
+# ==========================================
+
+def _make_cache_key(*args) -> str:
+    """根据输入内容生成缓存 key"""
+    content = "|".join(str(a)[:5000] for a in args)
+    return hashlib.md5(content.encode("utf-8")).hexdigest()
+
+
+def cache_get(namespace: str, *args) -> str | None:
+    """读取缓存，返回 None 表示未命中"""
+    key = _make_cache_key(*args)
+    cache_file = os.path.join(CACHE_DIR, namespace, f"{key}.json")
+    if not os.path.exists(cache_file):
+        return None
+    try:
+        with open(cache_file, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        # 检查过期 (默认 24 小时)
+        if time.time() - data.get("ts", 0) > 86400:
+            os.remove(cache_file)
+            return None
+        return data.get("value", "")
+    except Exception:
+        return None
+
+
+def cache_set(namespace: str, value: str, *args):
+    """写入缓存"""
+    key = _make_cache_key(*args)
+    cache_dir = os.path.join(CACHE_DIR, namespace)
+    os.makedirs(cache_dir, exist_ok=True)
+    cache_file = os.path.join(cache_dir, f"{key}.json")
+    try:
+        with open(cache_file, "w", encoding="utf-8") as f:
+            json.dump({"ts": time.time(), "value": value}, f, ensure_ascii=False)
+    except Exception:
+        pass
+
+
+def cache_clear(namespace: str = ""):
+    """清空缓存"""
+    target = os.path.join(CACHE_DIR, namespace) if namespace else CACHE_DIR
+    if os.path.exists(target):
+        shutil.rmtree(target)
+        os.makedirs(target, exist_ok=True)
+
+
+# ==========================================
+# 9. 日志处理工具
 # ==========================================
 def get_smart_snippet(content: str, head: int = 3000, tail: int = 3000) -> str:
     """提取日志头尾的智能摘要 (同时降低 Token 消耗)"""
@@ -328,13 +514,7 @@ def get_smart_snippet(content: str, head: int = 3000, tail: int = 3000) -> str:
 
 
 def filter_log_content(content: str, keywords: list, context_lines: int = 5) -> str:
-    """
-    关键日志初筛算法 (优化版: 基于索引集去重):
-    1. 扫描所有行，找到包含 keywords 的行。
-    2. 针对每一个命中行，将其 前N行 和 后N行 的索引加入集合。
-    3. 对集合排序，提取内容。
-    4. 如果行号不连续，插入分隔符。
-    """
+    """关键日志初筛算法 (基于索引集去重)"""
     if not content or not keywords:
         return content
 
@@ -342,7 +522,7 @@ def filter_log_content(content: str, keywords: list, context_lines: int = 5) -> 
     total_lines = len(lines)
     keep_indices = set()
 
-    valid_keywords = [k.lower().strip() for k in keywords if k.strip()]
+    valid_keywords = [k.lower().strip() for k in keywords if k and k.strip()]
     if not valid_keywords:
         return content
 
@@ -369,4 +549,3 @@ def filter_log_content(content: str, keywords: list, context_lines: int = 5) -> 
         last_idx = idx
 
     return "\n".join(result_lines)
-

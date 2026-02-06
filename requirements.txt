@@ -1,7 +1,7 @@
+# ===== LogPilot 核心依赖 (Phase 1: Streamlit 前端) =====
 streamlit>=1.30
 pandas>=2.0
 openai>=1.0
 httpx>=0.24
 python-docx>=1.1.0
 pypdf>=4.0
-
