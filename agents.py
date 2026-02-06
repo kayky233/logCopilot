@@ -10,6 +10,11 @@ class BaseAgent:
         self.model_name = model_name
 
     def call_llm(self, system_prompt, user_content, max_tokens=2000):
+        """
+        调用 LLM，始终返回 **字符串**。
+        成功 → 返回模型回复文本
+        失败 → 返回 "Agent Error: ..." 字符串
+        """
         try:
             response = self.client.chat.completions.create(
                 model=self.model_name,
@@ -20,14 +25,16 @@ class BaseAgent:
                 temperature=0.1,
                 max_tokens=max_tokens,
             )
-            return {"ok": True, "content": response.choices[0].message.content}
+            # 🟢 防御: message.content 可能是 None（某些模型/错误场景）
+            content = response.choices[0].message.content
+            return content if content else ""
         except Exception as e:
-            return {"ok": False, "error": str(e), "content": None}
+            return f"Agent Error: {str(e)}"
 
 
 class ManualAgent(BaseAgent):
     """
-    📚 手册顾问：在分析日志前，先通读手册，制定“结构化维测指南”。
+    📚 手册顾问：在分析日志前，先通读手册，制定"结构化维测指南"。
     """
 
     def extract_criteria(self, manual_content, focus_keywords=None):
@@ -35,78 +42,57 @@ class ManualAgent(BaseAgent):
         Phase 1: 阅读手册，输出给 Log Agent 的结构化搜查令。
         """
         short_manual = manual_content[:15000]
+
+        # 🟢 防御: focus_keywords 可能包含非字符串元素或 None
+        if focus_keywords:
+            focus_keywords = [str(k) for k in focus_keywords if k]
+
         kw_hint = ""
         if focus_keywords and len(focus_keywords) > 0:
             kw_str = ", ".join(focus_keywords)
             kw_hint = f"🔍 **重点线索提示**：用户怀疑故障与以下关键词有关，请优先关注相关章节：[{kw_str}]"
 
         sys_p = """你是基站故障排查专家（Tier-3 Technical Support）。
-
-你要把手册内容转换为“可机读的诊断规则集”，供 Log Agent 精确匹配。
+你要把手册内容转换为"可机读的诊断规则集"，供 Log Agent 精确匹配。
 
 硬性要求：
-
 1) 只输出一个 JSON（不得包含 Markdown、解释文字、代码块标记）。
 2) 必须给每条规则一个唯一的 rule_id（例如 "R001"）。
 3) 不要编造手册中没有的错误码/字符串/阈值；不确定就不要写入 rules。
-4) 规则要包含“故障判据”和“恢复/自愈判据”（如果手册提到）。
+4) 规则要包含"故障判据"和"恢复/自愈判据"（如果手册提到）。
 
 输出 JSON schema：
-
 {
-
   "product": "string or null",
-
   "version": "string or null",
-
   "rules": [
-
     {
-
       "rule_id": "R001",
-
       "title": "string",
-
       "severity": "FATAL|ERROR|WARN|INFO|UNKNOWN",
-
       "signatures": [
-
         {"type":"literal|regex|code", "value":"string", "must": true|false}
-
       ],
-
       "conditions": ["IF ... THEN ...", "..."],
-
       "recovery_signatures": [{"type":"literal|regex|code", "value":"string"}],
-
       "ignore_signatures": [{"type":"literal|regex|code", "value":"string"}],
-
       "thresholds": [{"name":"string","op":"<|<=|>|>=|==","value":"number|string","unit":"string or null"}],
-
       "notes": "string"
-
     }
-
   ]
-
 }
 """
 
         user_p = f"""
-
 【手册内容片段】
-
 {short_manual}
 
 {kw_hint}
 
 请生成结构化维测指南：
-
 """
-        resp = self.call_llm(sys_p, user_p, max_tokens=1500)
-        if resp.get("ok"):
-            return resp.get("content", "")
-        return f"Agent Error: {resp.get('error', 'Unknown')}"
+        # call_llm 现在直接返回字符串
+        return self.call_llm(sys_p, user_p, max_tokens=1500)
 
 
 class LogAgent(BaseAgent):
@@ -118,25 +104,19 @@ class LogAgent(BaseAgent):
         snippet = utils.get_smart_snippet(raw_log_content, head=3000, tail=5000)
 
         sys_p = """你是嵌入式日志取证专家。
-
 你将收到：
-
 - Manual rules（严格 JSON）
-
 - 日志片段
 
-任务：从日志中提取“最关键的一起事件”，并判断它是否命中某条规则。
+任务：从日志中提取"最关键的一起事件"，并判断它是否命中某条规则。
 
 硬性要求：
-
 1) 只输出一个 JSON（不得包含 Markdown、解释文字）。
 2) 不得编造错误码/规则/路径/行号。没有就填 null。
 3) 如果命中规则，必须填写 matched_rule_id，并在 match_reason 中引用该 rule_id。
 4) 必须输出 evidence_lines：直接复制日志原文中最关键的 3~8 行（包含时间戳也可以），用于人工复核。
 5) 如果日志存在异常但没有任何规则命中，matched_rule_id 填 null，match_reason 固定写：
-
    "日志存在异常，但未在指南中找到对应描述"
-
 """
 
         required_schema = {
@@ -160,15 +140,13 @@ class LogAgent(BaseAgent):
             + json.dumps(required_schema, ensure_ascii=False, indent=2)
         )
 
-        resp = self.call_llm(sys_p, user_p, max_tokens=1500)
-        if resp.get("ok"):
-            return resp.get("content", "")
-        return f"Agent Error: {resp.get('error', 'Unknown')}"
+        # call_llm 现在直接返回字符串
+        return self.call_llm(sys_p, user_p, max_tokens=1500)
 
 
 class CodeAgent(BaseAgent):
     """
-    代码专家：审计代码逻辑 (逻辑保持不变)。
+    代码专家：审计代码逻辑。
     """
 
     def investigate(self, codebase_root, server_prefix, file_path, line_number):
@@ -195,24 +173,17 @@ class CodeAgent(BaseAgent):
 
         sys_p = "你是一个资深 C/C++ 开发专家。"
         user_p = f"""
-
 请阅读以下代码片段，该片段在 Line {line_number} 处报错。
-
 请解释该处的代码逻辑，特别是：
-
 1. 触发报错/断言的条件是什么？
 2. 变量可能的取值是什么？
 
 Code Snippet:
-
 {raw_code}
-
 """
 
-        resp = self.call_llm(sys_p, user_p)
-        if resp.get("ok"):
-            return resp.get("content", "")
-        return f"Agent Error: {resp.get('error', 'Unknown')}"
+        # call_llm 现在直接返回字符串
+        return self.call_llm(sys_p, user_p)
 
 
 class BossAgent(BaseAgent):
@@ -224,58 +195,40 @@ class BossAgent(BaseAgent):
         sys_p = """你是故障诊断判决器（Boss Agent）。你必须严格基于输入字段做结论。
 
 硬性规则：
-
 1) 如果 manual_ok=false 或 log_ok=false，则 is_fault 必须为 false，confidence 必须 <= 50。
 2) 当上游失败时，title 只能是 "PipelineFailure" 或 "Unknown"。
 3) reason 必须解释是哪一步失败，失败原因是什么；不得把 HTTP 504、timeout 等当成设备故障。
-4) fix 必须给出可执行的“恢复 pipeline/重试/采集更多日志”的建议，而不是设备侧修复。
+4) fix 必须给出可执行的"恢复 pipeline/重试/采集更多日志"的建议，而不是设备侧修复。
 5) 只输出一个 JSON，不得输出 Markdown 或额外文字。
-
 """
 
         user_p = f"""
-
 请基于以下三位专家的报告，生成最终的故障分析报告。
 
 【1. 📚 判据来源 (Manual Guide)】
-
 {manual_guide}
 
 【2. 🕵️‍♂️ 现场证据 (Log Analysis)】
-
 {log_summary}
 
 【3. 💻 代码逻辑 (Code Insight)】
-
 {code_insight}
 
 # 判决任务
-
 1. **Is Fault**: 判断是否为真正的故障。
 2. **Confidence**: 给出置信度 (0-100)。如果日志完美匹配了手册指南中的特征，置信度应 > 90。
 3. **Reason**: 结合代码逻辑和手册判据，解释为什么发生该故障。
 4. **Fix**: 给出具体的排查或恢复建议。
 
 # Output Format (JSON Only)
-
-{
-
+{{
     "is_fault": boolean,
-
     "confidence": integer,
-
     "title": "String (故障标题)",
-
     "reason": "String (详细的根因分析)",
-
     "fix": "String (建议列表)"
-
-}
-
+}}
 """
 
-        resp = self.call_llm(sys_p, user_p, max_tokens=2000)
-        if resp.get("ok"):
-            return resp.get("content", "")
-        return f"Agent Error: {resp.get('error', 'Unknown')}"
-
+        # call_llm 现在直接返回字符串
+        return self.call_llm(sys_p, user_p, max_tokens=2000)

@@ -95,18 +95,32 @@ class FaultDetectorClient:
         }
 
         try:
-            # Phase 1: Manual Agent
+            # =========================================================
+            # Phase 1: 📚 Manual Agent (先读手册，制定标准)
+            # =========================================================
             trace_data["steps"].append(f"📚 Manual Agent ({self.fast_model}): 正在研读手册，制定维测指南...")
             manual_guide = self.manual_agent.extract_criteria(manual_content, focus_keywords)
+            # 🟢 确保 manual_guide 是字符串
+            manual_guide = str(manual_guide) if manual_guide else "(Manual Agent 返回为空)"
             trace_data["manual_guide"] = manual_guide
 
-            # Phase 2: Log Agent
+            print("\n" + "=" * 50)
+            print("🐛 [DEBUG] Manual Agent 原始返回内容 (前200字):")
+            print(manual_guide[:200])
+            print("=" * 50 + "\n")
+
+            # =========================================================
+            # Phase 2: 🕵️‍♂️ Log Agent (带着指南查日志)
+            # =========================================================
             trace_data["steps"].append(f"🕵️‍♂️ Log Agent ({self.fast_model}): 正在根据指南分析日志...")
             log_summary_json_str = ""
             log_info = {}
 
             try:
                 log_summary_json_str = self.log_agent.summarize(log_content, manual_guide)
+                # 🟢 确保是字符串
+                log_summary_json_str = str(log_summary_json_str) if log_summary_json_str else ""
+
                 print("\n" + "=" * 50)
                 print("🐛 [DEBUG] Log Agent 原始返回内容:")
                 print(log_summary_json_str)
@@ -131,7 +145,15 @@ class FaultDetectorClient:
 
             trace_data["log_summary"] = log_summary_json_str
 
-            # Phase 3: Code Agent
+            # 🟢 提前记录 final_input，即使后续 Phase 3/4 异常也能保留上下文
+            trace_data["final_input"] = (
+                f"Manual Guide:\n{manual_guide}\n\n"
+                f"Log Summary:\n{log_summary_json_str}"
+            )
+
+            # =========================================================
+            # Phase 3: 💻 Code Agent (按需)
+            # =========================================================
             code_insight = "未启用代码审计。"
             if enable_code_agent:
                 if codebase_root and log_info.get("file_path") and log_info.get("line_number"):
@@ -149,18 +171,29 @@ class FaultDetectorClient:
             else:
                 trace_data["steps"].append("💻 Code Agent: 已禁用 (跳过)")
 
+            # 🟢 确保 code_insight 是字符串
+            code_insight = str(code_insight) if code_insight else "(Code Agent 返回为空)"
             trace_data["code_insight"] = code_insight
 
-            # Phase 4: Boss Agent
+            # =========================================================
+            # Phase 4: 🧠 Boss Agent (最终判决)
+            # =========================================================
             trace_data["steps"].append(f"🧠 Boss Agent ({self.smart_model}): 正在生成最终报告...")
             raw_res = self.boss_agent.conclude(
                 manual_guide=manual_guide,
                 log_summary=log_summary_json_str,
                 code_insight=code_insight,
             )
+            # 🟢 确保是字符串
+            raw_res = str(raw_res) if raw_res else ""
 
             trace_data["raw_response"] = raw_res
-            trace_data["final_input"] = f"Manual Guide:\n{manual_guide}\n\nLog Summary:\n{log_summary_json_str}"
+            # 追加 Code Insight 到 final_input
+            trace_data["final_input"] += f"\n\nCode Insight:\n{code_insight}"
+
+            print("\n" + "=" * 50)
+            print(f"🐛 [DEBUG] final_input 字符数: {len(trace_data['final_input'])}")
+            print("=" * 50 + "\n")
 
             parsed_data = self._safe_parse_json(raw_res)
             if isinstance(parsed_data, list):
@@ -168,6 +201,12 @@ class FaultDetectorClient:
             return self._normalize_result(parsed_data), trace_data
 
         except Exception as e:
+            import traceback
+            print(f"❌ Pipeline 外层异常: {e}")
+            traceback.print_exc()
+            # 🟢 防御: 即使异常也尝试填充 final_input
+            if not trace_data.get("final_input"):
+                trace_data["final_input"] = f"(Pipeline异常，部分数据丢失)\nError: {str(e)}"
             error_res = {
                 "is_fault": False,
                 "title": "Pipeline Error",
