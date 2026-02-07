@@ -244,4 +244,9 @@ MIT License
 ---
 
 > **LogPilot** — 让每一次基站告警都有据可依 📡
+## Architecture Proposal
+
+- Multi-component implementation and validation plan: `doc/architecture_implementation_validation_plan.md`
+- Runnable core prototype: `backend/services/diagnosis_core.py`
+- Low-cost validation runner: `backend/services/validation_service.py`
 
