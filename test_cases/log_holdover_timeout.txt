@@ -1,0 +1,28 @@
+c[2026/02/01 08:00:01.100234567] sev:INFO src:SYS_CTRL BootComplete(): System boot success, board=UMPT, up time 86400s.
+c[2026/02/01 08:00:02.050345678] sev:INFO src:CLK_REF_SEL RefSourceSelect(): Ref source selected: GNSS (Priority 1), SSM=PRC.
+c[2026/02/01 08:00:02.500456789] sev:INFO src:PLL_CTRL PllStatusCheck(): PLL status=LOCKED, jitter=6ns, state_reg=0x0.
+c[2026/02/01 08:30:00.000567890] sev:ERR error:0x40B030 src:GNSS_RCV::
+ [ gnss_hw.c / AntennaFaultDetect / 135 ]:
+ GPS antenna connection fault detected: OPEN_CIRCUIT, antenna_voltage=6.1V.
+c[2026/02/01 08:30:00.050678901] sev:WARN src:GNSS_RCV SatelliteTrack(): Satellite tracking lost, visible_SVs=0.
+c[2026/02/01 08:30:00.100789012] sev:WARN src:CLK_REF_SEL RefQualityMonitor(): GNSS reference source unavailable.
+c[2026/02/01 08:30:00.150890123] sev:WARN src:CLK_REF_SEL RefSourceSelect(): Fallback to 1588v2 (Priority 2).
+c[2026/02/01 08:30:00.200901234] sev:ERR error:0x50C010 src:PTP_CLIENT::
+ [ ptp_session.c / SessionStatusQuery / 85 ]:
+ PTP session not established: no valid Master found on any port.
+c[2026/02/01 08:30:00.250012345] sev:ERR src:CLK_REF_SEL RefSourceSelect(): All external references unavailable (GNSS=fault, 1588v2=no_session, SyncE=not_configured).
+c[2026/02/01 08:30:00.300123456] sev:WARN src:HOLDOVER_CTRL HoldoverActivate(): Holdover mode activated, oscillator=OCXO, estimated_drift=1.0us/hour, max_holdover=24h.
+c[2026/02/01 08:30:00.350234567] sev:INFO src:PLL_CTRL PllStatusCheck(): PLL status=HOLDOVER, state_reg=0x2.
+c[2026/02/01 08:30:00.400345678] sev:INFO src:SYS_CTRL AlarmReport(): Reporting alarm to OMC: Clock_Holdover_Entered, severity=MINOR.
+c[2026/02/01 09:30:00.000456789] sev:INFO src:HOLDOVER_CTRL HoldoverMonitor(): Holdover elapsed=3600s (1h), phase_offset=0.95us, drift_rate=0.95us/h, quality=GOOD.
+c[2026/02/01 12:30:00.000567890] sev:WARN src:HOLDOVER_CTRL HoldoverMonitor(): Holdover elapsed=14400s (4h), phase_offset=4.1us, drift_rate=1.03us/h, quality=ACCEPTABLE.
+c[2026/02/01 12:30:00.050678901] sev:WARN src:RF_CTRL RadioFrameTimingCheck(): Radio frame timing offset=4.1us (threshold=1.5us), TX already shutdown at t+1h12min.
+c[2026/02/01 18:30:00.000789012] sev:WARN src:HOLDOVER_CTRL HoldoverMonitor(): Holdover elapsed=36000s (10h), phase_offset=11.2us, drift_rate=1.12us/h, quality=DEGRADED.
+c[2026/02/02 08:30:00.000890123] sev:ERR error:0x30D020 src:HOLDOVER_CTRL::
+ [ holdover.c / HoldoverTimeoutCheck / 320 ]:
+ Holdover maximum duration exceeded: elapsed=86400s (24h), oscillator accuracy can no longer be guaranteed.
+c[2026/02/02 08:30:00.050901234] sev:FATAL error:0x30F010 src:CLK_CORE::
+ [ clk_core.c / ClockStateTransition / 450 ]:
+ Clock state transition: HOLDOVER -> FREE_RUN. System clock quality degradation to UNKNOWN.
+c[2026/02/02 08:30:00.100012345] sev:FATAL src:SYS_CTRL AlarmReport(): Reporting alarm to OMC: Clock_Free_Running, severity=CRITICAL.
+c[2026/02/02 08:30:01.000123456] sev:ERR src:SYS_CTRL AlarmReport(): SUMMARY: All clock references lost for 24h. Base station in FREE_RUN mode. Immediate on-site intervention required.

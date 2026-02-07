@@ -1,0 +1,22 @@
+c[2026/02/01 10:00:01.100234567] sev:INFO src:SYS_CTRL BootComplete(): System boot success, board=UMPT, up time 7200s.
+c[2026/02/01 10:00:02.050345678] sev:INFO src:CLK_REF_SEL RefSourceSelect(): Ref source selected: GNSS (Priority 1), SSM=PRC.
+c[2026/02/01 10:00:02.500456789] sev:INFO src:PLL_CTRL PllStatusCheck(): PLL status=LOCKED, jitter=10ns, state_reg=0x0.
+c[2026/02/01 10:00:30.000567890] sev:WARN src:GNSS_RCV SignalMonitor(): Satellite signal unstable, avg_SNR fluctuating: 16→11→17→9.
+c[2026/02/01 10:00:35.000678901] sev:WARN src:CLK_REF_SEL RefQualityMonitor(): GNSS reference quality degraded, SSM changed: PRC -> DNU.
+c[2026/02/01 10:00:35.050789012] sev:INFO src:CLK_REF_SEL RefSourceSelect(): Ref source switchover: GNSS -> 1588v2 (Priority 2), SSM=PRC_Traceable.
+c[2026/02/01 10:00:35.100890123] sev:INFO src:PLL_CTRL PllStatusCheck(): PLL re-acquiring, target source=1588v2, state_reg=0x1.
+c[2026/02/01 10:00:38.000901234] sev:INFO src:PLL_CTRL PllStatusCheck(): PLL status=LOCKED, jitter=8ns, state_reg=0x0, source=1588v2.
+c[2026/02/01 10:00:50.000012345] sev:INFO src:CLK_REF_SEL RefQualityMonitor(): GNSS reference recovered, SSM changed: DNU -> PRC.
+c[2026/02/01 10:00:50.050123456] sev:INFO src:CLK_REF_SEL RefSourceSelect(): GNSS recovered (higher priority). Ref source switchover: 1588v2 -> GNSS.
+c[2026/02/01 10:00:50.100234567] sev:INFO src:PLL_CTRL PllStatusCheck(): PLL re-acquiring, target source=GNSS, state_reg=0x1.
+c[2026/02/01 10:00:53.000345678] sev:INFO src:PLL_CTRL PllStatusCheck(): PLL status=LOCKED, jitter=12ns, state_reg=0x0, source=GNSS.
+c[2026/02/01 10:01:10.000456789] sev:WARN src:CLK_REF_SEL RefQualityMonitor(): GNSS reference quality degraded again, SSM changed: PRC -> DNU.
+c[2026/02/01 10:01:10.050567890] sev:INFO src:CLK_REF_SEL RefSourceSelect(): Ref source switchover: GNSS -> 1588v2. [switchover_count=3 in 40s]
+c[2026/02/01 10:01:30.000678901] sev:WARN src:CLK_REF_SEL RefQualityMonitor(): GNSS recovered again, SSM=PRC.
+c[2026/02/01 10:01:30.050789012] sev:INFO src:CLK_REF_SEL RefSourceSelect(): Ref source switchover: 1588v2 -> GNSS. [switchover_count=4 in 60s]
+c[2026/02/01 10:01:45.000890123] sev:WARN src:CLK_REF_SEL RefQualityMonitor(): GNSS quality degraded again, SSM=DNU.
+c[2026/02/01 10:01:45.050901234] sev:ERR error:0x50E001 src:CLK_REF_SEL::
+ [ clk_ref_sel.c / OscillationDetect / 320 ]:
+ Clock source oscillation detected: switchover_count=5 in 75s (threshold=3/120s). Suppressing switchover, locking current source=1588v2.
+c[2026/02/01 10:01:45.100012345] sev:WARN src:CLK_REF_SEL RefSourceSelect(): Switchover suppressed. GNSS reference locked out until manual clear or quality stable for 300s.
+c[2026/02/01 10:01:50.000123456] sev:WARN src:SYS_CTRL AlarmReport(): Reporting alarm to OMC: Clock_Source_Oscillation, severity=MINOR.

@@ -1,0 +1,24 @@
+c[2026/02/01 10:00:01.100234567] sev:INFO src:SYS_CTRL BootComplete(): System boot success, board=UMPT, up time 200s.
+c[2026/02/01 10:00:02.050345678] sev:INFO src:CLK_REF_SEL RefSourceSelect(): Ref source selected: GNSS (Priority 1), SSM=PRC.
+c[2026/02/01 10:00:02.500456789] sev:INFO src:PLL_CTRL PllStatusCheck(): PLL status=LOCKED, jitter=8ns, state_reg=0x0.
+c[2026/02/01 10:00:10.000567890] sev:WARN error:0x40B010 src:GNSS_RCV::
+ [ gnss_hw.c / AntennaVoltageCheck / 112 ]:
+ GPS antenna voltage abnormal: measured=0.2V (expected range 4.6~5.4V).
+c[2026/02/01 10:00:10.050678901] sev:ERR error:0x40B011 src:GNSS_RCV::
+ [ gnss_hw.c / AntennaFaultDetect / 135 ]:
+ GPS antenna connection fault detected: SHORT_CIRCUIT.
+c[2026/02/01 10:00:10.100789012] sev:WARN src:GNSS_RCV SatelliteTrack(): Satellite tracking lost, visible_SVs=0 (min_required=4).
+c[2026/02/01 10:00:10.500890123] sev:WARN src:CLK_REF_SEL RefQualityMonitor(): GNSS reference source unavailable, initiating source switchover.
+c[2026/02/01 10:00:10.550901234] sev:INFO src:CLK_REF_SEL RefSourceSelect(): Attempting fallback to 1588v2 (Priority 2).
+c[2026/02/01 10:00:10.600012345] sev:WARN error:0x50C001 src:CLK_REF_SEL::
+ [ clk_ref_sel.c / RefSourceFallback / 267 ]:
+ 1588v2 source not configured or not available, fallback failed.
+c[2026/02/01 10:00:10.650123456] sev:WARN src:CLK_REF_SEL RefSourceSelect(): No external reference available. Switching to internal oscillator (Holdover mode).
+c[2026/02/01 10:00:10.700234567] sev:INFO src:HOLDOVER_CTRL HoldoverActivate(): Holdover mode activated, oscillator=OCXO, estimated_drift=1.5us/hour.
+c[2026/02/01 10:00:10.700345678] sev:INFO src:PLL_CTRL PllStatusCheck(): PLL status=HOLDOVER, state_reg=0x2.
+c[2026/02/01 10:00:30.000456789] sev:WARN src:HOLDOVER_CTRL HoldoverMonitor(): Holdover time=20s, phase_offset accumulating, current_offset=0.008us.
+c[2026/02/01 10:05:10.000567890] sev:WARN src:HOLDOVER_CTRL HoldoverMonitor(): Holdover time=300s, current_offset=0.12us, drift_rate=1.4us/hour.
+c[2026/02/01 11:00:10.000678901] sev:ERR error:0x30D001 src:HOLDOVER_CTRL::
+ [ holdover.c / HoldoverTimeoutCheck / 310 ]:
+ Holdover time exceeded threshold: elapsed=3600s, offset=1.6us (limit=1.5us).
+c[2026/02/01 11:00:10.100789012] sev:ERR src:RF_CTRL RadioFrameTimingCheck(): Radio frame timing offset=1.7us (threshold=1.5us), shutting down TX.

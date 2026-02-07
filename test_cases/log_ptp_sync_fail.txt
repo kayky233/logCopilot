@@ -1,0 +1,24 @@
+c[2026/02/01 10:00:01.100234567] sev:INFO src:SYS_CTRL BootComplete(): System boot success, board=UMPT, up time 3600s.
+c[2026/02/01 10:00:02.050345678] sev:INFO src:CLK_REF_SEL RefSourceSelect(): Ref source selected: 1588v2 (Priority 1), SSM=PRC_Traceable.
+c[2026/02/01 10:00:02.500456789] sev:INFO src:PLL_CTRL PllStatusCheck(): PLL status=LOCKED, jitter=5ns, state_reg=0x0.
+c[2026/02/01 10:00:03.000567890] sev:INFO src:PTP_CLIENT PtpSessionInfo(): PTP session active: Master=192.168.1.1, port=GE0/0/1, domain=24, profile=G.8275.1.
+c[2026/02/01 10:00:03.050678901] sev:INFO src:PTP_CLIENT PtpSessionInfo(): Sync rate=16pps, Announce rate=8pps, delay_mech=E2E, two_step=TRUE.
+c[2026/02/01 10:05:00.000789012] sev:WARN src:PTP_CLIENT PtpPDVMonitor(): PTP path delay variation increased: PDV=280ns (baseline=50ns), link congestion suspected.
+c[2026/02/01 10:05:15.000890123] sev:WARN error:0x50D001 src:PTP_CLIENT::
+ [ ptp_session.c / AnnounceTimeoutCheck / 178 ]:
+ PTP Announce message timeout: master=192.168.1.1, no Announce received for 375ms (threshold=3*125ms).
+c[2026/02/01 10:05:15.050901234] sev:ERR error:0x50D002 src:PTP_CLIENT::
+ [ ptp_session.c / MasterLostHandler / 195 ]:
+ PTP Master unreachable: master=192.168.1.1, BMCA state changed: SLAVE -> LISTENING.
+c[2026/02/01 10:05:15.100012345] sev:ERR error:0x50D003 src:PTP_CLIENT::
+ [ ptp_session.c / TimeLockStatusUpdate / 210 ]:
+ PTP time lock failed: hwPtpTimeLockStatus=UNLOCK, hwPtpTimeLockFailReason=masterLost.
+c[2026/02/01 10:05:15.200123456] sev:WARN src:CLK_REF_SEL RefQualityMonitor(): 1588v2 reference source unavailable, checking fallback sources.
+c[2026/02/01 10:05:15.250234567] sev:INFO src:CLK_REF_SEL RefSourceSelect(): Fallback to GNSS (Priority 2), checking availability.
+c[2026/02/01 10:05:15.300345678] sev:ERR error:0x40A020 src:GNSS_RCV::
+ [ gnss_recv.c / GnssStatusQuery / 100 ]:
+ GNSS not available: module_state=DISABLED (not configured on this site).
+c[2026/02/01 10:05:15.350456789] sev:WARN src:CLK_REF_SEL RefSourceSelect(): All external references lost. Switching to Holdover mode.
+c[2026/02/01 10:05:15.400567890] sev:INFO src:HOLDOVER_CTRL HoldoverActivate(): Holdover mode activated, oscillator=OCXO, estimated_drift=1.2us/hour.
+c[2026/02/01 10:05:15.450678901] sev:INFO src:PLL_CTRL PllStatusCheck(): PLL status=HOLDOVER, state_reg=0x2.
+c[2026/02/01 10:05:30.000789012] sev:WARN src:SYS_CTRL AlarmReport(): Reporting alarm to OMC: PTP_Master_Lost, severity=MAJOR.
