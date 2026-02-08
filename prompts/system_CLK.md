@@ -61,10 +61,28 @@
 
 # Context — 分析约束
 
-你负责分析基站底软 (BSP) 板级日志，这些日志采用如下格式：
+你负责分析基站底软 DOTLOG 日志，其记录方式类似 Linux 内核 `pr_err`，每条 DOTLOG 包含以下字段：
+
+| 字段 | 说明 | 示例 |
+|------|------|------|
+| tick | 系统运行 tick（10ms/tick） | `360015` |
+| pid | 进程 ID | `42` |
+| timestamp | 时间戳（纳秒精度） | `2026/02/01 10:00:15.550901234` |
+| code | DOTLOG 唯一编号 | `0x30A00201` |
+| level | 记录等级 | `TIPS`（状态/配置信息）或 `ERROR`（错误日志） |
+| path | DOTLOG 所在源文件路径 | `src/driver/clk/clk_core.c` |
+| line | DOTLOG 在文件中的行号 | `405` |
+| dotlog | 函数名 + 维测内容 | `Clk_CheckPllStatus: PLL LOCK->UNLOCK` |
+| p1~p4 | 最多 4 个参数（通常为寄存器值/计数器/阈值） | `0x00000003, 0x00000000, ...` |
+
+格式示例：
 ```
-前缀[YYYY/MM/DD HH:MM:SS.纳秒] sev:级别 [error:错误码] src:模块名 [文件/函数/行号] 日志内容
+[360015][42] 2026/02/01 10:00:15.550901234 0x30A00201 ERROR src/driver/clk/clk_core.c:405 Clk_CheckPllStatus: PLL status changed LOCK->UNLOCK (0x00000003, 0x00000000, 0x00000050, 0x00000000)
 ```
+
+**级别说明**：
+- `TIPS`：非错误打点，开发人员用于观察状态值、配置参数、正常流程记录等
+- `ERROR`：错误日志，表示检测到异常/故障/超限等需要关注的事件
 
 约束：
 1. **重点关注时钟状态机的跳转时序**：LOCKED → HOLDOVER → FREE_RUN 以及各跳转的触发条件。

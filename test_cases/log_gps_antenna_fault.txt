@@ -1,24 +1,16 @@
-c[2026/02/01 10:00:01.100234567] sev:INFO src:SYS_CTRL BootComplete(): System boot success, board=UMPT, up time 200s.
-c[2026/02/01 10:00:02.050345678] sev:INFO src:CLK_REF_SEL RefSourceSelect(): Ref source selected: GNSS (Priority 1), SSM=PRC.
-c[2026/02/01 10:00:02.500456789] sev:INFO src:PLL_CTRL PllStatusCheck(): PLL status=LOCKED, jitter=8ns, state_reg=0x0.
-c[2026/02/01 10:00:10.000567890] sev:WARN error:0x40B010 src:GNSS_RCV::
- [ gnss_hw.c / AntennaVoltageCheck / 112 ]:
- GPS antenna voltage abnormal: measured=0.2V (expected range 4.6~5.4V).
-c[2026/02/01 10:00:10.050678901] sev:ERR error:0x40B011 src:GNSS_RCV::
- [ gnss_hw.c / AntennaFaultDetect / 135 ]:
- GPS antenna connection fault detected: SHORT_CIRCUIT.
-c[2026/02/01 10:00:10.100789012] sev:WARN src:GNSS_RCV SatelliteTrack(): Satellite tracking lost, visible_SVs=0 (min_required=4).
-c[2026/02/01 10:00:10.500890123] sev:WARN src:CLK_REF_SEL RefQualityMonitor(): GNSS reference source unavailable, initiating source switchover.
-c[2026/02/01 10:00:10.550901234] sev:INFO src:CLK_REF_SEL RefSourceSelect(): Attempting fallback to 1588v2 (Priority 2).
-c[2026/02/01 10:00:10.600012345] sev:WARN error:0x50C001 src:CLK_REF_SEL::
- [ clk_ref_sel.c / RefSourceFallback / 267 ]:
- 1588v2 source not configured or not available, fallback failed.
-c[2026/02/01 10:00:10.650123456] sev:WARN src:CLK_REF_SEL RefSourceSelect(): No external reference available. Switching to internal oscillator (Holdover mode).
-c[2026/02/01 10:00:10.700234567] sev:INFO src:HOLDOVER_CTRL HoldoverActivate(): Holdover mode activated, oscillator=OCXO, estimated_drift=1.5us/hour.
-c[2026/02/01 10:00:10.700345678] sev:INFO src:PLL_CTRL PllStatusCheck(): PLL status=HOLDOVER, state_reg=0x2.
-c[2026/02/01 10:00:30.000456789] sev:WARN src:HOLDOVER_CTRL HoldoverMonitor(): Holdover time=20s, phase_offset accumulating, current_offset=0.008us.
-c[2026/02/01 10:05:10.000567890] sev:WARN src:HOLDOVER_CTRL HoldoverMonitor(): Holdover time=300s, current_offset=0.12us, drift_rate=1.4us/hour.
-c[2026/02/01 11:00:10.000678901] sev:ERR error:0x30D001 src:HOLDOVER_CTRL::
- [ holdover.c / HoldoverTimeoutCheck / 310 ]:
- Holdover time exceeded threshold: elapsed=3600s, offset=1.6us (limit=1.5us).
-c[2026/02/01 11:00:10.100789012] sev:ERR src:RF_CTRL RadioFrameTimingCheck(): Radio frame timing offset=1.7us (threshold=1.5us), shutting down TX.
+[720001][10] 2026/02/01 10:00:01.100234567 0x70100001 TIPS src/platform/sys/sys_ctrl.c:88 SysCtrl_BootComplete: System boot success, board=UMPT, up_time=200s (0x000000C8, 0x00000000, 0x00000000, 0x00000000)
+[720010][42] 2026/02/01 10:00:02.050345678 0x30100001 TIPS src/driver/clk/clk_ref_sel.c:120 ClkRefSel_Select: Ref source selected GNSS, priority=1, SSM=PRC (0x00000001, 0x00000004, 0x00000000, 0x00000000)
+[720015][42] 2026/02/01 10:00:02.500456789 0x30100002 TIPS src/driver/clk/clk_core.c:210 Clk_PllStatusCheck: PLL status=LOCKED, jitter=8ns, state_reg=0x0 (0x00000000, 0x00000008, 0x00000000, 0x00000000)
+[720100][55] 2026/02/01 10:00:10.000567890 0x40B00010 ERROR src/driver/gnss/gnss_hw.c:112 Gnss_AntennaVoltageCheck: GPS antenna voltage abnormal, measured_mV=200 expected_min=4600 expected_max=5400 (0x000000C8, 0x000011F8, 0x00001518, 0x00000000)
+[720105][55] 2026/02/01 10:00:10.050678901 0x40A00011 ERROR src/driver/gnss/gnss_hw.c:135 Gnss_AntennaFaultDetect: GPS antenna connection fault detected SHORT_CIRCUIT (0x00000001, 0x000000C8, 0x00000000, 0x00000000)
+[720110][55] 2026/02/01 10:00:10.100789012 0x40B00012 ERROR src/driver/gnss/gnss_signal.c:160 Gnss_SatelliteTrack: Satellite tracking lost, visible_SVs=0 min_required=4 (0x00000000, 0x00000004, 0x00000000, 0x00000000)
+[720150][42] 2026/02/01 10:00:10.500890123 0x30B00010 ERROR src/driver/clk/clk_ref_sel.c:200 ClkRefSel_QualityMonitor: GNSS reference source unavailable, initiating source switchover (0x00000001, 0x00000000, 0x00000000, 0x00000000)
+[720155][42] 2026/02/01 10:00:10.550901234 0x30100010 TIPS src/driver/clk/clk_ref_sel.c:215 ClkRefSel_Fallback: Attempting fallback to 1588v2 priority=2 (0x00000002, 0x00000000, 0x00000000, 0x00000000)
+[720160][42] 2026/02/01 10:00:10.600012345 0x30A00010 ERROR src/driver/clk/clk_ref_sel.c:267 ClkRefSel_Fallback: 1588v2 source not configured, fallback failed (0x00000002, 0x00000003, 0x00000000, 0x00000000)
+[720165][42] 2026/02/01 10:00:10.650123456 0x30B00011 TIPS src/driver/clk/clk_ref_sel.c:280 ClkRefSel_Select: No external reference available, switching to internal oscillator Holdover mode (0x00000005, 0x00000000, 0x00000000, 0x00000000)
+[720170][42] 2026/02/01 10:00:10.700234567 0x30100020 TIPS src/driver/clk/holdover.c:88 Holdover_Activate: Holdover mode activated, oscillator=OCXO estimated_drift_ppb=15 max_holdover_s=86400 (0x00000001, 0x0000000F, 0x00015180, 0x00000000)
+[720170][42] 2026/02/01 10:00:10.700345678 0x30100021 TIPS src/driver/clk/clk_core.c:220 Clk_PllStatusCheck: PLL status=HOLDOVER, state_reg=0x2 (0x00000002, 0x00000000, 0x00000000, 0x00000000)
+[720370][42] 2026/02/01 10:00:30.000456789 0x30100022 TIPS src/driver/clk/holdover.c:150 Holdover_Monitor: Holdover time=20s, phase_offset_ns=8 drift_rate_ppb=14 (0x00000014, 0x00000008, 0x0000000E, 0x00000000)
+[723170][42] 2026/02/01 10:05:10.000567890 0x30B00020 TIPS src/driver/clk/holdover.c:150 Holdover_Monitor: Holdover time=300s, phase_offset_ns=120 drift_rate_ppb=14 (0x0000012C, 0x00000078, 0x0000000E, 0x00000000)
+[756170][42] 2026/02/01 11:00:10.000678901 0x30A00020 ERROR src/driver/clk/holdover.c:310 Holdover_TimeoutCheck: Holdover time exceeded threshold, elapsed_s=3600 offset_us=1600 limit_us=1500 (0x00000E10, 0x00000640, 0x000005DC, 0x00000000)
+[756180][90] 2026/02/01 11:00:10.100789012 0x60A00002 ERROR src/driver/rf/rf_timing.c:305 RfCtrl_FrameTimingCheck: Radio frame timing offset exceeded threshold, offset_us=1700 limit_us=1500 shutting down TX (0x000006A4, 0x000005DC, 0x00000000, 0x00000000)

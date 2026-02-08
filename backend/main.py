@@ -60,13 +60,31 @@ app.include_router(admin_router, prefix="/api/v1")
 app.include_router(report_router, prefix="/api/v1")
 
 
-# ---- 健康检查 ----
+# ---- 健康检查 & 根路由 ----
 @app.get("/", tags=["系统"])
 async def root():
     return {
         "name": settings.APP_NAME,
         "version": settings.APP_VERSION,
         "status": "running",
+    }
+
+
+@app.get("/api/v1", tags=["系统"])
+async def api_root():
+    """API v1 入口 — 返回可用端点列表"""
+    return {
+        "name": settings.APP_NAME,
+        "version": settings.APP_VERSION,
+        "api_version": "v1",
+        "endpoints": {
+            "auth": "/api/v1/auth",
+            "tasks": "/api/v1/tasks",
+            "files": "/api/v1/files",
+            "admin": "/api/v1/admin",
+            "reports": "/api/v1/reports",
+        },
+        "docs": "/docs",
     }
 
 

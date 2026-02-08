@@ -206,10 +206,13 @@ def render_sidebar():
             usage = utils.get_user_storage_usage(user_id)
             pct = min(100, int(usage["total_mb"] / usage["limit_mb"] * 100)) if usage["limit_mb"] > 0 else 0
             bar_color = "#10B981" if pct < 70 else "#F59E0B" if pct < 90 else "#EF4444"
+
+            # 管理员状态标识
+            admin_badge = ' <span class="status-badge badge-amber">🔑 管理员</span>' if utils.is_admin() else ""
             st.markdown(f"""
             <div style="margin-top:4px;">
-                <div style="display:flex; justify-content:space-between; font-size:0.72rem; color:#6B7280;">
-                    <span>💾 存储</span>
+                <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.72rem; color:#6B7280;">
+                    <span>💾 存储{admin_badge}</span>
                     <span>{usage['total_mb']}MB / {usage['limit_mb']}MB · {usage['file_count']} 文件</span>
                 </div>
                 <div style="background:#1F2937; border-radius:4px; height:4px; margin-top:3px; overflow:hidden;">
@@ -217,6 +220,23 @@ def render_sidebar():
                 </div>
             </div>
             """, unsafe_allow_html=True)
+
+            # 管理员解锁/锁定
+            if utils.is_admin():
+                if st.button("🔒 退出管理员", key="btn_admin_lock", use_container_width=True):
+                    utils.set_admin_status(False)
+                    st.rerun()
+            else:
+                with st.popover("🔑 管理员", use_container_width=True):
+                    admin_pwd = st.text_input("管理员密码", type="password", key="admin_pwd_input",
+                                              placeholder="输入管理员密码")
+                    if st.button("解锁", key="btn_admin_unlock", type="primary", use_container_width=True):
+                        if utils.verify_admin_password(admin_pwd):
+                            utils.set_admin_status(True)
+                            st.toast("✅ 管理员权限已解锁", icon="🔑")
+                            st.rerun()
+                        else:
+                            st.error("❌ 密码错误")
 
         # ── API 连接 ──
         with st.expander("⚡ API 连接", expanded=not bool(user_config.get("api_key"))):
@@ -247,10 +267,10 @@ def render_sidebar():
                             utils.delete_files(user_log_dir, del_logs)
                             st.rerun()
 
-        # ── 故障手册 ──
-        with st.expander("📚 故障手册库", expanded=False):
+        # ── 故障手册 (领域内全局共享) ──
+        with st.expander("📚 故障手册库 (共享)", expanded=False):
             dom = st.selectbox("领域", utils.DOMAINS, key="dom_sel", label_visibility="collapsed")
-            user_manual_dir = os.path.join(utils.get_user_manual_root(user_id), dom)
+            shared_manual_dir = utils.get_shared_manual_dir(dom)
             up_m = st.file_uploader(f"上传至 {dom}", type=["md", "pdf", "docx", "txt"],
                                     accept_multiple_files=True, key=f"um_{dom}", label_visibility="collapsed")
             if up_m:
@@ -260,15 +280,19 @@ def render_sidebar():
             total_manuals = sum(len(v) for v in tree.values())
             if total_manuals > 0:
                 counts = [f"{d}:{len(tree.get(d, []))}" for d in utils.DOMAINS if tree.get(d)]
-                st.caption(f"库存: {' · '.join(counts)}")
-                if os.path.exists(user_manual_dir):
-                    files = sorted(os.listdir(user_manual_dir))
-                    if files:
-                        with st.popover(f"🗑️ 管理 {dom}"):
-                            del_files = st.multiselect("选择删除", files, key=f"del_{dom}")
-                            if del_files and st.button("确认删除", key=f"btn_d_{dom}", type="primary"):
-                                utils.delete_files(user_manual_dir, del_files)
-                                st.rerun()
+                st.caption(f"📖 共享库: {' · '.join(counts)}")
+
+            # 当前领域手册列表 (合并共享 + 用户私有)
+            domain_files = tree.get(dom, [])
+            if domain_files:
+                if utils.is_admin():
+                    with st.popover(f"🗑️ 管理 {dom} ({len(domain_files)} 个)"):
+                        del_files = st.multiselect("选择要删除的手册", domain_files, key=f"del_{dom}")
+                        if del_files and st.button("确认删除", key=f"btn_d_{dom}", type="primary"):
+                            utils.delete_shared_manuals(del_files, dom, user_id)
+                            st.rerun()
+                else:
+                    st.caption(f"📄 {dom} 共 {len(domain_files)} 个手册 (🔑 管理员可删除)")
 
         # ── 高级设置 ──
         with st.expander("🔬 高级设置", expanded=False):
@@ -318,15 +342,18 @@ def render_sidebar():
                 utils.save_prompt(layer, name, def_val)
                 st.rerun()
 
-        # ── 底部 ──
+        # ── 底部 (需管理员权限) ──
         st.divider()
-        dc1, dc2 = st.columns(2)
-        if dc1.button("🧹 清空数据", key="btn_cls", use_container_width=True):
-            utils.clear_user_workspace(user_id)
-            st.rerun()
-        if dc2.button("🗑️ 清缓存", key="btn_cache", use_container_width=True):
-            utils.cache_clear()
-            st.toast("缓存已清空", icon="🗑️")
+        if utils.is_admin():
+            dc1, dc2 = st.columns(2)
+            if dc1.button("🧹 清空数据", key="btn_cls", use_container_width=True):
+                utils.clear_user_workspace(user_id)
+                st.rerun()
+            if dc2.button("🗑️ 清缓存", key="btn_cache", use_container_width=True):
+                utils.cache_clear()
+                st.toast("缓存已清空", icon="🗑️")
+        else:
+            st.caption("🔑 清空数据 / 清缓存需要管理员权限")
 
         return a_key, b_url, m_name, enable_filter, filter_keywords, context_lines, new_prefix, enable_code_agent
 
@@ -428,9 +455,12 @@ def render_selectors(manual_tree, log_files, user_log_dir=""):
             if st.button("全选", key="m_select_all", use_container_width=True):
                 for m in all_manuals:
                     st.session_state["sel_manual_keys"].add(m["key"])
+                    st.session_state[f"mck_{m['key']}"] = True  # 同步 checkbox widget 状态
                 st.rerun()
         with fc4:
             if st.button("清空", key="m_clear_all", use_container_width=True):
+                for m in all_manuals:
+                    st.session_state[f"mck_{m['key']}"] = False  # 同步 checkbox widget 状态
                 st.session_state["sel_manual_keys"] = set()
                 st.rerun()
 
@@ -454,10 +484,12 @@ def render_selectors(manual_tree, log_files, user_log_dir=""):
                 if bc1.button("选中匹配项", key="m_batch_add", use_container_width=True):
                     for m in matched:
                         st.session_state["sel_manual_keys"].add(m["key"])
+                        st.session_state[f"mck_{m['key']}"] = True
                     st.rerun()
                 if bc2.button("取消匹配项", key="m_batch_remove", use_container_width=True):
                     for m in matched:
                         st.session_state["sel_manual_keys"].discard(m["key"])
+                        st.session_state[f"mck_{m['key']}"] = False
                     st.rerun()
 
         # 分页显示
@@ -529,10 +561,14 @@ def render_selectors(manual_tree, log_files, user_log_dir=""):
             )
         with lc2:
             if st.button("全选", key="l_select_all", use_container_width=True):
+                for f in log_files:
+                    st.session_state[f"lck_{f}"] = True  # 同步 checkbox widget 状态
                 st.session_state["sel_log_keys"] = set(log_files)
                 st.rerun()
         with lc3:
             if st.button("清空", key="l_clear_all", use_container_width=True):
+                for f in log_files:
+                    st.session_state[f"lck_{f}"] = False  # 同步 checkbox widget 状态
                 st.session_state["sel_log_keys"] = set()
                 st.rerun()
 
@@ -554,10 +590,12 @@ def render_selectors(manual_tree, log_files, user_log_dir=""):
                 if lbc1.button("选中匹配项", key="l_batch_add", use_container_width=True):
                     for f in l_matched:
                         st.session_state["sel_log_keys"].add(f)
+                        st.session_state[f"lck_{f}"] = True
                     st.rerun()
                 if lbc2.button("取消匹配项", key="l_batch_remove", use_container_width=True):
                     for f in l_matched:
                         st.session_state["sel_log_keys"].discard(f)
+                        st.session_state[f"lck_{f}"] = False
                     st.rerun()
 
         # 分页显示

@@ -1,20 +1,12 @@
-c[2026/02/01 10:00:01.100234567] sev:INFO src:SYS_CTRL BootComplete(): System boot success, board=UMPT, up time 100s.
-c[2026/02/01 10:00:02.050345678] sev:INFO src:CLK_REF_SEL RefSourceSelect(): Ref source selected: GNSS (Priority 1), SSM=PRC.
-c[2026/02/01 10:00:02.500456789] sev:INFO src:PLL_CTRL PllStatusCheck(): PLL status=LOCKED, jitter=12ns, state_reg=0x0.
-c[2026/02/01 10:00:05.000567890] sev:INFO src:NET_CTRL UserConnect(): User connected, mac=aa:bb:cc:dd:ee:ff.
-c[2026/02/01 10:00:10.000678901] sev:WARN src:GNSS_RCV SignalMonitor(): Satellite signal strength weak, avg_SNR=13 (threshold=15).
-c[2026/02/01 10:00:12.200789012] sev:INFO src:NET_CTRL Heartbeat(): Keepalive ack received.
-c[2026/02/01 10:00:15.500890123] sev:ERR error:0x30A001 src:PLL_CTRL::
- [ clk_core.c / Clk_CheckPllStatus / 398 ]:
- Detected reference jitter exceed threshold: current=68ns, limit=50ns.
-c[2026/02/01 10:00:15.550901234] sev:ERR error:0x30A002 src:PLL_CTRL::
- [ clk_core.c / Clk_CheckPllStatus / 405 ]:
- PLL status changed: LOCK -> UNLOCK, state_reg=0x3 (Reference Lost).
-c[2026/02/01 10:00:15.552012345] sev:FATAL error:0x30F001 src:CLK_CORE::
- [ clk_core.c / Clk_CheckPllStatus / 412 ]:
- Fatal Error: System PLL lost lock, current_state=0x3.
-c[2026/02/01 10:00:15.600123456] sev:ERR error:0x200105 src:BSP_SYNC::
- [ bsp_sync.c / SyncRequestHandler / 188 ]:
- Sync request failed due to clock unstable.
-c[2026/02/01 10:00:16.000234567] sev:WARN src:RF_CTRL RadioFrameTimingCheck(): Radio frame timing offset=2.8us (threshold=1.5us), shutting down TX.
-c[2026/02/01 10:00:18.000345678] sev:INFO src:SYS_CTRL TriggerReset(): Triggering software reset, reason=clock_failure.
+[360001][10] 2026/02/01 10:00:01.100234567 0x70100001 TIPS src/platform/sys/sys_ctrl.c:88 SysCtrl_BootComplete: System boot success, board=UMPT, up_time=100s (0x00000064, 0x00000000, 0x00000000, 0x00000000)
+[360010][42] 2026/02/01 10:00:02.050345678 0x30100001 TIPS src/driver/clk/clk_ref_sel.c:120 ClkRefSel_Select: Ref source selected GNSS, priority=1, SSM=PRC (0x00000001, 0x00000004, 0x00000000, 0x00000000)
+[360015][42] 2026/02/01 10:00:02.500456789 0x30100002 TIPS src/driver/clk/clk_core.c:210 Clk_PllStatusCheck: PLL status=LOCKED, jitter=12ns, state_reg=0x0 (0x00000000, 0x0000000C, 0x00000000, 0x00000000)
+[360050][70] 2026/02/01 10:00:05.000567890 0x70100010 TIPS src/platform/net/net_ctrl.c:55 NetCtrl_UserConnect: User connected, mac=aa:bb:cc:dd:ee:ff (0x00000000, 0x00000000, 0x00000000, 0x00000000)
+[360100][55] 2026/02/01 10:00:10.000678901 0x40B00001 TIPS src/driver/gnss/gnss_signal.c:95 Gnss_SignalMonitor: Satellite signal strength weak, avg_SNR=13 threshold=15 (0x0000000D, 0x0000000F, 0x00000000, 0x00000000)
+[360122][70] 2026/02/01 10:00:12.200789012 0x70100011 TIPS src/platform/net/net_ctrl.c:72 NetCtrl_Heartbeat: Keepalive ack received (0x00000000, 0x00000000, 0x00000000, 0x00000000)
+[360155][42] 2026/02/01 10:00:15.500890123 0x30A00001 ERROR src/driver/clk/clk_core.c:398 Clk_CheckPllStatus: Detected reference jitter exceed threshold, current=68ns limit=50ns (0x00000044, 0x00000032, 0x00000000, 0x00000000)
+[360155][42] 2026/02/01 10:00:15.550901234 0x30A00002 ERROR src/driver/clk/clk_core.c:405 Clk_CheckPllStatus: PLL status changed LOCK->UNLOCK, state_reg=0x3 Reference Lost (0x00000003, 0x00000000, 0x00000044, 0x00000000)
+[360155][42] 2026/02/01 10:00:15.552012345 0x30F00001 ERROR src/driver/clk/clk_core.c:412 Clk_CheckPllStatus: Fatal Error System PLL lost lock, current_state=0x3 (0x00000003, 0x00000000, 0x00000000, 0x00000000)
+[360156][20] 2026/02/01 10:00:15.600123456 0x20A00001 ERROR src/platform/bsp/bsp_sync.c:188 BspSync_RequestHandler: Sync request failed due to clock unstable (0x00000003, 0x00000000, 0x00000000, 0x00000000)
+[360160][90] 2026/02/01 10:00:16.000234567 0x60A00001 ERROR src/driver/rf/rf_timing.c:305 RfCtrl_FrameTimingCheck: Radio frame timing offset exceeded threshold, offset_us=2800 limit_us=1500 shutting down TX (0x00000AF0, 0x000005DC, 0x00000000, 0x00000000)
+[360180][10] 2026/02/01 10:00:18.000345678 0x70A00001 ERROR src/platform/sys/sys_ctrl.c:450 SysCtrl_TriggerReset: Triggering software reset, reason=clock_failure (0x00000005, 0x00000000, 0x00000000, 0x00000000)

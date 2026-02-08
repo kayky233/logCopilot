@@ -47,6 +47,25 @@ PATH_MAP_CONFIG_PATH = os.path.join(CONFIG_DIR, "path_mapping.txt")
 DOMAINS = ["BSP", "CLK", "SWITCH", "OTHER"]
 
 
+# ---- 管理员密码 (通过环境变量或默认值) ----
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "logpilot-admin")
+
+
+def verify_admin_password(password: str) -> bool:
+    """验证管理员密码"""
+    return password == ADMIN_PASSWORD
+
+
+def is_admin() -> bool:
+    """检查当前 session 是否已解锁管理员权限"""
+    return st.session_state.get("_admin_unlocked", False)
+
+
+def set_admin_status(unlocked: bool):
+    """设置管理员状态"""
+    st.session_state["_admin_unlocked"] = unlocked
+
+
 # ==========================================
 # 2. 初始资产 (Prompt 默认值)
 # ==========================================
@@ -407,8 +426,14 @@ def resolve_manual_path(user_id: str, domain: str, filename: str) -> str:
     return user_path  # fallback
 
 
+def get_shared_manual_dir(domain: str) -> str:
+    """获取领域共享手册目录路径"""
+    return os.path.join(SHARED_MANUAL_ROOT_DIR, domain)
+
+
 def save_uploaded_manuals(uploaded_files, domain, user_id="default"):
-    target_dir = os.path.join(get_user_manual_root(user_id), domain)
+    """上传手册至领域共享目录 (所有用户可见)"""
+    target_dir = get_shared_manual_dir(domain)
     os.makedirs(target_dir, exist_ok=True)
     saved = 0
     for f in uploaded_files:
@@ -420,7 +445,7 @@ def save_uploaded_manuals(uploaded_files, domain, user_id="default"):
             out_f.write(f.getbuffer())
         saved += 1
     if saved > 0:
-        st.toast(f"✅ {saved} 个手册已上传至 {domain}", icon="📚")
+        st.toast(f"✅ {saved} 个手册已上传至 {domain} (全局共享)", icon="📚")
 
 
 def save_uploaded_logs(uploaded_files, user_id="default"):
@@ -446,6 +471,33 @@ def delete_files(dir_path, filenames):
         except Exception:
             pass
     st.toast(f"🗑️ 已删除 {len(filenames)} 个文件", icon="🧹")
+
+
+def delete_shared_manuals(filenames, domain, user_id="default"):
+    """删除手册文件 (依次检查共享目录和用户私有目录)"""
+    deleted = 0
+    for f in filenames:
+        removed = False
+        # 优先删除共享目录中的文件
+        shared_path = os.path.join(SHARED_MANUAL_ROOT_DIR, domain, f)
+        if os.path.exists(shared_path):
+            try:
+                os.remove(shared_path)
+                removed = True
+            except Exception:
+                pass
+        # 也检查用户私有目录 (兼容旧数据)
+        user_path = os.path.join(get_user_manual_root(user_id), domain, f)
+        if os.path.exists(user_path):
+            try:
+                os.remove(user_path)
+                removed = True
+            except Exception:
+                pass
+        if removed:
+            deleted += 1
+    if deleted > 0:
+        st.toast(f"🗑️ 已从 {domain} 共享库删除 {deleted} 个手册", icon="🧹")
 
 
 # ==========================================

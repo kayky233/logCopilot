@@ -1,19 +1,13 @@
-c[2026/02/01 10:00:01.100234567] sev:INFO src:SYS_CTRL BootComplete(): System boot success, board=UMPT, up time 50s.
-c[2026/02/01 10:00:02.050345678] sev:INFO src:CLK_REF_SEL RefSourceSelect(): Ref source selected: GNSS (Priority 1), SSM=PRC.
-c[2026/02/01 10:00:05.000456789] sev:INFO src:GNSS_RCV SatelliteSearch(): Satellite search started, mode=GPS+BDS, antenna_voltage=4.9V.
-c[2026/02/01 10:00:15.000567890] sev:INFO src:GNSS_RCV SatelliteSearch(): Satellites acquired: 2 (GPS:1, BDS:1), avg_SNR=12.
-c[2026/02/01 10:00:30.000678901] sev:WARN src:GNSS_RCV SatelliteSearch(): Insufficient satellites: visible=2, min_required=4, position fix unavailable.
-c[2026/02/01 10:00:45.000789012] sev:WARN src:GNSS_RCV SignalMonitor(): Satellite signal SNR below threshold: GPS-SV03=8, BDS-SV12=10 (threshold=15).
-c[2026/02/01 10:01:00.000890123] sev:WARN error:0x40A010 src:GNSS_RCV::
- [ gnss_recv.c / SearchTimeout / 220 ]:
- Search timeout (60s), satellites still insufficient: visible=3, required=4.
-c[2026/02/01 10:01:00.050901234] sev:ERR error:0x40A011 src:GNSS_RCV::
- [ gnss_recv.c / TimingSourceEval / 245 ]:
- GNSS time source not ready: 1PPS signal invalid, position_fix=NONE.
-c[2026/02/01 10:01:00.100012345] sev:WARN src:PLL_CTRL PllStatusCheck(): PLL unable to lock to GNSS reference, maintaining holdover, state_reg=0x2.
-c[2026/02/01 10:01:00.150123456] sev:WARN src:HOLDOVER_CTRL HoldoverMonitor(): Holdover accuracy degrading: phase_offset accumulating at 2.1us/min.
-c[2026/02/01 10:05:00.000234567] sev:ERR error:0x30D010 src:HOLDOVER_CTRL::
- [ holdover.c / PhaseOffsetCheck / 285 ]:
- Phase offset exceeded threshold: current=3.2us (limit=1.5us), timing unreliable.
-c[2026/02/01 10:05:00.100345678] sev:ERR src:RF_CTRL RadioFrameTimingCheck(): TDD timing guard violation, offset=3.2us, potential inter-cell interference.
-c[2026/02/01 10:05:01.000456789] sev:WARN src:SYS_CTRL AlarmReport(): Reporting alarm to OMC: Clock_Source_Unavailable, severity=MAJOR.
+[180001][10] 2026/02/01 10:00:01.100234567 0x70100001 TIPS src/platform/sys/sys_ctrl.c:88 SysCtrl_BootComplete: System boot success, board=UMPT, up_time=50s (0x00000032, 0x00000000, 0x00000000, 0x00000000)
+[180010][42] 2026/02/01 10:00:02.050345678 0x30100001 TIPS src/driver/clk/clk_ref_sel.c:120 ClkRefSel_Select: Ref source selected GNSS, priority=1, SSM=PRC (0x00000001, 0x00000004, 0x00000000, 0x00000000)
+[180050][55] 2026/02/01 10:00:05.000456789 0x40100001 TIPS src/driver/gnss/gnss_recv.c:80 Gnss_SatelliteSearch: Satellite search started, mode=GPS+BDS, antenna_voltage_mV=4900 (0x00000003, 0x00001324, 0x00000000, 0x00000000)
+[181050][55] 2026/02/01 10:00:15.000567890 0x40100002 TIPS src/driver/gnss/gnss_recv.c:95 Gnss_SatelliteSearch: Satellites acquired GPS=1 BDS=1 total=2, avg_SNR=12 (0x00000002, 0x00000001, 0x00000001, 0x0000000C)
+[182550][55] 2026/02/01 10:00:30.000678901 0x40B00020 ERROR src/driver/gnss/gnss_recv.c:110 Gnss_SatelliteSearch: Insufficient satellites, visible=2 min_required=4 position_fix=NONE (0x00000002, 0x00000004, 0x00000000, 0x00000000)
+[184050][55] 2026/02/01 10:00:45.000789012 0x40B00021 TIPS src/driver/gnss/gnss_signal.c:95 Gnss_SignalMonitor: Satellite signal SNR below threshold, GPS_SV03=8 BDS_SV12=10 threshold=15 (0x00000008, 0x0000000A, 0x0000000F, 0x00000000)
+[186000][55] 2026/02/01 10:01:00.000890123 0x40A00020 ERROR src/driver/gnss/gnss_recv.c:220 Gnss_SearchTimeout: Search timeout 60s, satellites still insufficient visible=3 required=4 (0x0000003C, 0x00000003, 0x00000004, 0x00000000)
+[186005][55] 2026/02/01 10:01:00.050901234 0x40A00021 ERROR src/driver/gnss/gnss_recv.c:245 Gnss_TimingSourceEval: GNSS time source not ready, 1PPS signal invalid position_fix=NONE (0x00000000, 0x00000000, 0x00000000, 0x00000000)
+[186010][42] 2026/02/01 10:01:00.100012345 0x30B00030 TIPS src/driver/clk/clk_core.c:230 Clk_PllStatusCheck: PLL unable to lock to GNSS reference, maintaining holdover state_reg=0x2 (0x00000002, 0x00000001, 0x00000000, 0x00000000)
+[186015][42] 2026/02/01 10:01:00.150123456 0x30B00031 TIPS src/driver/clk/holdover.c:155 Holdover_Monitor: Holdover accuracy degrading, phase_offset accumulating rate_ppb=21 (0x00000015, 0x00000000, 0x00000000, 0x00000000)
+[210000][42] 2026/02/01 10:05:00.000234567 0x30A00030 ERROR src/driver/clk/holdover.c:285 Holdover_PhaseOffsetCheck: Phase offset exceeded threshold, current_us=3200 limit_us=1500 timing unreliable (0x00000C80, 0x000005DC, 0x00000000, 0x00000000)
+[210010][90] 2026/02/01 10:05:00.100345678 0x60A00010 ERROR src/driver/rf/rf_timing.c:310 RfCtrl_FrameTimingCheck: TDD timing guard violation, offset_us=3200 potential inter-cell interference (0x00000C80, 0x000005DC, 0x00000000, 0x00000000)
+[210110][10] 2026/02/01 10:05:01.000456789 0x70B00001 ERROR src/platform/sys/sys_ctrl.c:500 SysCtrl_AlarmReport: Reporting alarm to OMC Clock_Source_Unavailable severity=MAJOR (0x00000003, 0x00000002, 0x00000000, 0x00000000)
