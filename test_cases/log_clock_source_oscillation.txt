@@ -1,22 +1,20 @@
-c[2026/02/01 10:00:01.100234567] sev:INFO src:SYS_CTRL BootComplete(): System boot success, board=UMPT, up time 7200s.
-c[2026/02/01 10:00:02.050345678] sev:INFO src:CLK_REF_SEL RefSourceSelect(): Ref source selected: GNSS (Priority 1), SSM=PRC.
-c[2026/02/01 10:00:02.500456789] sev:INFO src:PLL_CTRL PllStatusCheck(): PLL status=LOCKED, jitter=10ns, state_reg=0x0.
-c[2026/02/01 10:00:30.000567890] sev:WARN src:GNSS_RCV SignalMonitor(): Satellite signal unstable, avg_SNR fluctuating: 16→11→17→9.
-c[2026/02/01 10:00:35.000678901] sev:WARN src:CLK_REF_SEL RefQualityMonitor(): GNSS reference quality degraded, SSM changed: PRC -> DNU.
-c[2026/02/01 10:00:35.050789012] sev:INFO src:CLK_REF_SEL RefSourceSelect(): Ref source switchover: GNSS -> 1588v2 (Priority 2), SSM=PRC_Traceable.
-c[2026/02/01 10:00:35.100890123] sev:INFO src:PLL_CTRL PllStatusCheck(): PLL re-acquiring, target source=1588v2, state_reg=0x1.
-c[2026/02/01 10:00:38.000901234] sev:INFO src:PLL_CTRL PllStatusCheck(): PLL status=LOCKED, jitter=8ns, state_reg=0x0, source=1588v2.
-c[2026/02/01 10:00:50.000012345] sev:INFO src:CLK_REF_SEL RefQualityMonitor(): GNSS reference recovered, SSM changed: DNU -> PRC.
-c[2026/02/01 10:00:50.050123456] sev:INFO src:CLK_REF_SEL RefSourceSelect(): GNSS recovered (higher priority). Ref source switchover: 1588v2 -> GNSS.
-c[2026/02/01 10:00:50.100234567] sev:INFO src:PLL_CTRL PllStatusCheck(): PLL re-acquiring, target source=GNSS, state_reg=0x1.
-c[2026/02/01 10:00:53.000345678] sev:INFO src:PLL_CTRL PllStatusCheck(): PLL status=LOCKED, jitter=12ns, state_reg=0x0, source=GNSS.
-c[2026/02/01 10:01:10.000456789] sev:WARN src:CLK_REF_SEL RefQualityMonitor(): GNSS reference quality degraded again, SSM changed: PRC -> DNU.
-c[2026/02/01 10:01:10.050567890] sev:INFO src:CLK_REF_SEL RefSourceSelect(): Ref source switchover: GNSS -> 1588v2. [switchover_count=3 in 40s]
-c[2026/02/01 10:01:30.000678901] sev:WARN src:CLK_REF_SEL RefQualityMonitor(): GNSS recovered again, SSM=PRC.
-c[2026/02/01 10:01:30.050789012] sev:INFO src:CLK_REF_SEL RefSourceSelect(): Ref source switchover: 1588v2 -> GNSS. [switchover_count=4 in 60s]
-c[2026/02/01 10:01:45.000890123] sev:WARN src:CLK_REF_SEL RefQualityMonitor(): GNSS quality degraded again, SSM=DNU.
-c[2026/02/01 10:01:45.050901234] sev:ERR error:0x50E001 src:CLK_REF_SEL::
- [ clk_ref_sel.c / OscillationDetect / 320 ]:
- Clock source oscillation detected: switchover_count=5 in 75s (threshold=3/120s). Suppressing switchover, locking current source=1588v2.
-c[2026/02/01 10:01:45.100012345] sev:WARN src:CLK_REF_SEL RefSourceSelect(): Switchover suppressed. GNSS reference locked out until manual clear or quality stable for 300s.
-c[2026/02/01 10:01:50.000123456] sev:WARN src:SYS_CTRL AlarmReport(): Reporting alarm to OMC: Clock_Source_Oscillation, severity=MINOR.
+[2592001][10] 2026/02/01 10:00:01.100234567 0x70100001 TIPS src/platform/sys/sys_ctrl.c:88 SysCtrl_BootComplete: System boot success, board=UMPT, up_time=7200s (0x00001C20, 0x00000000, 0x00000000, 0x00000000)
+[2592010][42] 2026/02/01 10:00:02.050345678 0x30100001 TIPS src/driver/clk/clk_ref_sel.c:120 ClkRefSel_Select: Ref source selected GNSS, priority=1, SSM=PRC (0x00000001, 0x00000004, 0x00000000, 0x00000000)
+[2592015][42] 2026/02/01 10:00:02.500456789 0x30100002 TIPS src/driver/clk/clk_core.c:210 Clk_PllStatusCheck: PLL status=LOCKED, jitter=10ns, state_reg=0x0 (0x00000000, 0x0000000A, 0x00000000, 0x00000000)
+[2595000][55] 2026/02/01 10:00:30.000567890 0x40B00030 TIPS src/driver/gnss/gnss_signal.c:100 Gnss_SignalMonitor: Satellite signal unstable, SNR fluctuating 16->11->17->9 (0x00000010, 0x0000000B, 0x00000011, 0x00000009)
+[2595500][42] 2026/02/01 10:00:35.000678901 0x30B00050 ERROR src/driver/clk/clk_ref_sel.c:200 ClkRefSel_QualityMonitor: GNSS reference quality degraded, SSM changed PRC->DNU (0x00000004, 0x00000001, 0x00000000, 0x00000000)
+[2595505][42] 2026/02/01 10:00:35.050789012 0x30100060 TIPS src/driver/clk/clk_ref_sel.c:240 ClkRefSel_Switchover: Ref source switchover GNSS->1588v2, priority=2, SSM=PRC_Traceable (0x00000001, 0x00000002, 0x00000003, 0x00000001)
+[2595510][42] 2026/02/01 10:00:35.100890123 0x30100061 TIPS src/driver/clk/clk_core.c:235 Clk_PllStatusCheck: PLL re-acquiring, target_source=1588v2, state_reg=0x1 (0x00000001, 0x00000002, 0x00000000, 0x00000000)
+[2595810][42] 2026/02/01 10:00:38.000901234 0x30100062 TIPS src/driver/clk/clk_core.c:210 Clk_PllStatusCheck: PLL status=LOCKED, jitter=8ns, state_reg=0x0 source=1588v2 (0x00000000, 0x00000008, 0x00000002, 0x00000000)
+[2597000][42] 2026/02/01 10:00:50.000012345 0x30100063 TIPS src/driver/clk/clk_ref_sel.c:200 ClkRefSel_QualityMonitor: GNSS reference recovered, SSM changed DNU->PRC (0x00000001, 0x00000004, 0x00000000, 0x00000000)
+[2597005][42] 2026/02/01 10:00:50.050123456 0x30100064 TIPS src/driver/clk/clk_ref_sel.c:240 ClkRefSel_Switchover: GNSS recovered higher priority, Ref source switchover 1588v2->GNSS (0x00000002, 0x00000001, 0x00000003, 0x00000002)
+[2597010][42] 2026/02/01 10:00:50.100234567 0x30100065 TIPS src/driver/clk/clk_core.c:235 Clk_PllStatusCheck: PLL re-acquiring, target_source=GNSS, state_reg=0x1 (0x00000001, 0x00000001, 0x00000000, 0x00000000)
+[2597310][42] 2026/02/01 10:00:53.000345678 0x30100066 TIPS src/driver/clk/clk_core.c:210 Clk_PllStatusCheck: PLL status=LOCKED, jitter=12ns, state_reg=0x0 source=GNSS (0x00000000, 0x0000000C, 0x00000001, 0x00000000)
+[2599000][42] 2026/02/01 10:01:10.000456789 0x30B00051 ERROR src/driver/clk/clk_ref_sel.c:200 ClkRefSel_QualityMonitor: GNSS reference quality degraded again, SSM changed PRC->DNU (0x00000004, 0x00000001, 0x00000000, 0x00000000)
+[2599005][42] 2026/02/01 10:01:10.050567890 0x30100067 TIPS src/driver/clk/clk_ref_sel.c:240 ClkRefSel_Switchover: Ref source switchover GNSS->1588v2, switchover_count=3 in 40s (0x00000001, 0x00000002, 0x00000003, 0x00000028)
+[2601000][42] 2026/02/01 10:01:30.000678901 0x30100068 TIPS src/driver/clk/clk_ref_sel.c:200 ClkRefSel_QualityMonitor: GNSS recovered again, SSM=PRC (0x00000001, 0x00000004, 0x00000000, 0x00000000)
+[2601005][42] 2026/02/01 10:01:30.050789012 0x30100069 TIPS src/driver/clk/clk_ref_sel.c:240 ClkRefSel_Switchover: Ref source switchover 1588v2->GNSS, switchover_count=4 in 60s (0x00000002, 0x00000001, 0x00000004, 0x0000003C)
+[2602500][42] 2026/02/01 10:01:45.000890123 0x30B00052 ERROR src/driver/clk/clk_ref_sel.c:200 ClkRefSel_QualityMonitor: GNSS quality degraded again, SSM=DNU (0x00000004, 0x00000001, 0x00000000, 0x00000000)
+[2602505][42] 2026/02/01 10:01:45.050901234 0x30A00050 ERROR src/driver/clk/clk_ref_sel.c:320 ClkRefSel_OscillationDetect: Clock source oscillation detected, switchover_count=5 in 75s threshold=3/120s, suppressing switchover locking current_source=1588v2 (0x00000005, 0x0000004B, 0x00000003, 0x00000078)
+[2602510][42] 2026/02/01 10:01:45.100012345 0x30B00053 TIPS src/driver/clk/clk_ref_sel.c:335 ClkRefSel_Switchover: Switchover suppressed, GNSS locked out until manual clear or quality stable 300s (0x00000001, 0x0000012C, 0x00000000, 0x00000000)
+[2603000][10] 2026/02/01 10:01:50.000123456 0x70B00020 ERROR src/platform/sys/sys_ctrl.c:500 SysCtrl_AlarmReport: Reporting alarm to OMC Clock_Source_Oscillation severity=MINOR (0x00000004, 0x00000001, 0x00000000, 0x00000000)
